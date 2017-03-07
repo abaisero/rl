@@ -7,7 +7,7 @@ class environment(object):
 
     @memoizemethod
     def nstates(self, begin=True, middle=True, terminal=False):
-        return len(self.states(begin, terminal))
+        return len(self.states(begin=begin, middle=middle, terminal=terminal))
 
     def actions(self, s):
         return NotImplementedError
