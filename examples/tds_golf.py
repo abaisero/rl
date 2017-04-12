@@ -58,9 +58,9 @@ class GolfAction(Action):
 
 
 class GolfModel(Model):
-    def __init__(self, s0dist_m, s0dist_s2):
+    def __init__(self, s0dist_m, s0dist_s):
         super(GolfModel, self).__init__()
-        self.s0dist_rv = norm(s0dist_m, s0dist_s2)
+        self.s0dist_rv = norm(s0dist_m, s0dist_s)
 
     def sample_s0(self):
         s0dist = abs(self.s0dist_rv.rvs())
@@ -90,7 +90,7 @@ class GolfModel(Model):
 
         n, m, s, p = a.club
 
-        x = norm.rvs(m, s ** 2)
+        x = norm.rvs(m, s)
         if p * x <= s0.dist <= x:
             return tstate
 
@@ -103,8 +103,8 @@ class GolfModel(Model):
 
 class GolfMDP(MDP):
     """ Golf game MDP """
-    def __init__(self, s0dist_m, s0dist_s2, clubs):
-        super(GolfMDP, self).__init__(GolfModel(s0dist_m, s0dist_s2))
+    def __init__(self, s0dist_m, s0dist_s, clubs):
+        super(GolfMDP, self).__init__(GolfModel(s0dist_m, s0dist_s))
 
         self.clubs = clubs
         self.maxr = 1
@@ -126,14 +126,14 @@ if __name__ == '__main__':
     # policy = Policy_UCB(env.actions, Q.value, Q.confidence, beta=10.)
     # # policy = Policy_egreedy(env.actions, Q, .5)
 
-    s0dist_m, s0dist_s2 = 20, 5
+    s0dist_m, s0dist_s = 20, 5
     clubs = [
         ('wood', 10, 5, .9),
         ('iron', 5, .5, .5),
         ('putt', 1, .05, 0),
     ]
 
-    mdp = GolfMDP(s0dist_m, s0dist_s2, clubs)
+    mdp = GolfMDP(s0dist_m, s0dist_s, clubs)
 
     # NOTE linear AV, egreedy policy
     # TODO this one is not working
