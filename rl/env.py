@@ -8,17 +8,17 @@ import numpy.random as rnd
 ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
 
 
-class State(object):
-    def __hash__(self):
-        raise NotImplementedError
 
-    def __eq__(self, other):
-        raise NotImplementedError
-
-    def __ne__(self, other):
-        return not self == other
 
 ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
+
+# self.terminal = object()
+terminal = type(
+    'Terminal',
+    (object,),
+    dict(__str__=lambda self: 'Terminal'),
+)()
+
 
 
 class EnvironmentException(Exception):
@@ -27,10 +27,9 @@ class EnvironmentException(Exception):
 
 class Environment(object):
     def __init__(self):
-        self.terminal = object()
-
         self.__states_start = None
         self.__states_nostart = None
+        self.__actions_all = None
 
     @property
     def states_start(self):
@@ -58,7 +57,18 @@ class Environment(object):
             yield s
 
     def actions(self, s):
-        raise NotImplementedError
+        return self.actions_all
+    
+    @property
+    def actions_all(self):
+        if self.__actions_all is None:
+            raise EnvironmentException('The action list of this environment is not instantiated.  Maybe your environment doesn\'t impement the .actions(s) method?')
+        return self.__actions_all
+
+    @actions_all.setter
+    def actions_all(self, value):
+        self.__actions_all = value
+
 
 ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
 
@@ -117,3 +127,8 @@ class Model(object):
 
     def sample_r(self, s0, a, s1):
         raise NotImplementedError
+
+    def sample_rs1(self, s0, a):
+        s1 = self.sample_s1(s0, a)
+        r = self.sample_r(s0, a, s1)
+        return r, s1

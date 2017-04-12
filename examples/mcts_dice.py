@@ -1,21 +1,27 @@
-from __future__ import division
-
 import numpy as np
 import numpy.random as rnd
-
 import matplotlib.pyplot as plt
 
-import pytk.itt as tkitt
+from rl.problems import tstate, State, Action, SAPair, Model
+from rl.problems.mdp import MDP
+from rl.values import ActionValues_Tabular, ActionValues_LinearBayesian
+from rl.policy import Policy_random, Policy_UCB, UCB_confidence_Q
+from rl.algo.search import MCTS, TDSearch
 
-from rl.env import State, Environment, Model
-from rl.values import ActionValues
-from rl.policy import Policy_UCB1, Policy_random, Policy_egreedy
+from pytk.util import true_every
 
 
 class DiceState(State):
+    discrete = True
+
     def __init__(self, npips, nrolls):
         self.npips = npips
         self.nrolls = nrolls
+
+        degree = 2
+        self.phi = np.empty(degree + 2)
+        self.phi[0] = nrolls
+        self.phi[1:] = np.vander([npips], degree + 1)
 
     def __hash__(self):
         return hash((self.npips, self.nrolls))
@@ -24,301 +30,166 @@ class DiceState(State):
         return self.npips == other.npips and self.nrolls == other.nrolls
 
     def __str__(self):
-        return 'DiceState({}, {})'.format(self.npips, self.nrolls)
-
-    def __repr__(self):
-        return str(self)
+        return 'S(npips={}, nrolls={})'.format(self.npips, self.nrolls)
 
 
-class DiceEnv(Environment):
-    """ Dice game environment. """
-    def __init__(self, nfaces, reroll_r=-1):
-        super(DiceEnv, self).__init__()
+class DiceAction(Action):
+    discrete = True
 
-        self.nfaces = nfaces
-        self.scale_r = nfaces
-        self.reroll_r = reroll_r
+    def __init__(self, hit):
+        self.hit = hit
+        self.stand = not hit
 
-        self.states_start = [DiceState(npips, 0) for npips in xrange(1, self.nfaces + 1)]
-        self.model = DiceModel(self)
+        # self.phi = np.array([self.hit, self.stand], dtype=np.float64)
+        self.phi = np.array([self.hit, self.stand], dtype=np.int64)
 
-    def actions(self, s):
-        return ['hit', 'stand']
+    def __hash__(self):
+        return hash(self.hit)
 
-    def roll(self):
-        return rnd.choice(self.nfaces) + 1
+    def __eq__(self, other):
+        return self.hit == other.hit
+
+    def __str__(self):
+        return 'A(\'{}\')'.format('hit' if self.hit else 'stand')
 
 
 class DiceModel(Model):
+    def __init__(self, roll, reroll_r):
+        super(DiceModel, self).__init__()
+        self.roll = roll
+        self.reroll_r = reroll_r
+
+    def sample_s0(self):
+        return DiceState(self.roll(), 0)
+
     def sample_s1(self, s0, a):
-        return self.env.terminal if a == 'stand' else DiceState(self.env.roll(), s0.nrolls + 1)
+        return tstate if a.stand else DiceState(self.roll(), s0.nrolls + 1)
 
     def sample_r(self, s0, a, s1):
-        return float(s0.npips if a == 'stand' else self.env.reroll_r)
+        return s0.npips if a.stand else self.reroll_r
 
 
-class MCTS_node(object):
-    def __init__(self, data, meta=None, parent=None):
-        if meta is None:
-            meta = {}
+class DiceMDP(MDP):
+    """ Dice game MDP. """
+    def __init__(self, nfaces, reroll_r):
+        # model = DiceModel(lambda: rnd.choice(nfaces)+1, reroll_r)
+        # super(DiceMDP, self).__init__(model)
+        super(DiceMDP, self).__init__(DiceModel(lambda: rnd.choice(nfaces)+1, reroll_r))
 
-        self.data = data
-        self.meta = meta
-        self.parent = parent
-        self.children = {}
+        self.nfaces = nfaces
+        self.maxr = max(abs(reroll_r), abs(nfaces))
 
-    @property
-    def nchildren(self):
-        return len(self.children)
-
-    def add_child(self, data, meta=None):
-        child = MCTS_node(data, meta=None, parent=self)
-        self.children[data] = child
-        return child
+        self.statelist_start = [DiceState(npips, 0) for npips in xrange(1, nfaces + 1)]
+        self.actionlist = map(DiceAction, [True, False])
 
 
-class MCTS_tree(object):
-    def __init__(self, env):
-        self.env = env
-        self.root = None
+def run(mdp, sm):
+    root_values = {}
 
-    def reroot(self, s=None):
-        self.root = MCTS_node(s)
-        # for a in self.env.actions(s):
-        #     self.root.add_child(a)
-        return self.root
+    actions = []
+    for s0 in mdp.statelist_start:
+        print 'state: {}'.format(s0)
+        # a, values = sm.run(s0, 50000)
+        a, values = sm.run(s0, 10000, 100, verbose=True)
+        for a_ in mdp.actions(s0):
+            root_values[s0, a_] = values[a_]
 
-class MCTS(object):
-    def __init__(self, env, model, policy_tree, policy_dflt, Q, gamma=1.):
-        # if cache is None:
-        #     cache = MCTS_cache()
+        print 'action: {}'.format(a)
+        print '---'
+        actions.append((s0, a))
 
-        self.env = env
-        self.model = model
-        self.policy_tree = policy_tree
-        self.policy_dflt = policy_dflt
-        self.policy_greedy = Policy_egreedy(env.actions, Q)
+    print 'cache'
+    for s in mdp.statelist_start:
+        for a in mdp.actions(s):
+            print '{}: {}, {}'.format((s, a), Q(s, a), Q.n(s, a))
 
-        self.tree = MCTS_tree(env)
-        self.Q = Q
-        self.gamma = gamma
+    print 'optimal actions'
+    for s, a in actions:
+        print '{}: {}'.format(s, a)
 
-    def policy_optimal(self, s):
-        return self.policy_greedy.sample_a(s)
+    print 'optimal actions'
+    for s in mdp.statelist_start:
+        for nrolls in xrange(5):
+            s_ = DiceState(s.npips, nrolls)
+            a = sm.policy_greedy.sample_a(s_)
+            print '{} ; {} ; {} ; {}'.format(s_, a, Q(s_, a), Q.confidence(s_, a))
 
-    def run(self, sroot, budget):
-        root_values = {a: [self.Q(sroot, a)] for a in self.env.actions(sroot)}
-
-        self.tree.reroot(sroot)
-        for i in xrange(budget):
-            snode = self.tree.root
-
-            # SELECTION
-            # print '---'
-            while True:
-                s0 = snode.data
-                if s0 is self.env.terminal \
-                        or len(snode.children) < len(self.env.actions(s0)):
-                    break
-
-                a = self.policy_tree.sample_a(s0)
-                s1 = self.model.sample_s1(s0, a)
-                r = self.model.sample_r(s0, a, s1)
-
-                # print '{}, {}, {}, {}'.format(s0, a, r, s1)
-                snode.meta['r'] = r
-
-                anode = snode.children[a]
-                try:
-                    snode = anode.children[s1]
-                except KeyError:
-                    snode = anode.add_child(s1)
-
-            # EXPANSION
-            if s0 is not self.env.terminal:
-                actions = set(self.env.actions(s0)) - set(snode.children.itervalues())
-                ai = rnd.choice(len(actions))
-                a = tkitt.nth(ai, actions)
-                s1 = self.model.sample_s1(s0, a)
-                r = self.model.sample_r(s0, a, s1)
-
-                snode.meta['r'] = r
-                anode = snode.add_child(a)
-                snode = anode.add_child(s1)
-
-                s0 = s1
-
-            # SIMULATION
-            g, gammat = 0, 1
-            while s0 is not self.env.terminal:
-                a = self.policy_dflt.sample_a(s0)
-                s1 = self.model.sample_s1(s0, a)
-                r = self.model.sample_r(s0, a, s1)
-
-                g += gammat * r 
-                gammat *= self.gamma
-                # print '{}, {}, {}, {}'.format(s0, a, r, s1)
-
-                s0 = s1
-
-            # BACKPROPAGATION
-            while anode is not None:
-                snode = anode.parent
-                g = snode.meta['r'] + self.gamma * g
-                self.Q.update(g, snode.data, anode.data)
-                anode = snode.parent
-
-            for a in self.env.actions(sroot):
-                root_values[a].append(self.Q(sroot, a))
-
-        # Select the root action with highest score
-        return self.policy_optimal(sroot), root_values
-
-
-class TDSearch(object):
-    def __init__(self, env, model, policy_tree, policy_dflt, Q, gamma=1.):
-        # if cache is None:
-        #     cache = MCTS_cache()
-
-        self.env = env
-        self.model = model
-        self.policy_tree = policy_tree
-        self.policy_dflt = policy_dflt
-        self.policy_greedy = Policy_egreedy(env.actions, Q)
-
-        self.tree = MCTS_tree(env)
-        self.Q = Q
-        self.gamma = gamma
-
-    def policy_optimal(self, s):
-        return self.policy_greedy.sample_a(s)
-
-    def run(self, sroot, budget):
-        # TODO TDSearch doesn't really need a tree..
-        root_values = {a: [self.Q(sroot, a)] for a in self.env.actions(sroot)}
-
-        self.tree.reroot(sroot)
-        for i in xrange(budget):
-            snode = self.tree.root
-
-            # SELECTION
-            # print '---'
-            while True:
-                s0 = snode.data
-                if s0 is self.env.terminal \
-                        or len(snode.children) < len(self.env.actions(s0)):
-                    break
-
-                a = self.policy_tree.sample_a(s0)
-                s1 = self.model.sample_s1(s0, a)
-                r = self.model.sample_r(s0, a, s1)
-
-                # print '{}, {}, {}, {}'.format(s0, a, r, s1)
-                self.Q.update(self.TD_target(r, s1), s0, a)
-
-                anode = snode.children[a]
-                try:
-                    snode = anode.children[s1]
-                except KeyError:
-                    snode = anode.add_child(s1)
-
-            # EXPANSION
-            if s0 is not self.env.terminal:
-                actions = set(self.env.actions(s0)) - set(snode.children.itervalues())
-                ai = rnd.choice(len(actions))
-                a = tkitt.nth(ai, actions)
-                s1 = self.model.sample_s1(s0, a)
-                r = self.model.sample_r(s0, a, s1)
-
-                self.Q.update(self.TD_target(r, s1), s0, a)
-
-                anode = snode.add_child(a)
-                snode = anode.add_child(s1)
-
-                s0 = s1
-
-            # SIMULATION
-            g, gammat = 0, 1
-            while s0 is not self.env.terminal:
-                a = self.policy_dflt.sample_a(s0)
-                s1 = self.model.sample_s1(s0, a)
-                r = self.model.sample_r(s0, a, s1)
-
-                self.Q.update(self.TD_target(r, s1), s0, a)
-                # print '{}, {}, {}, {}'.format(s0, a, r, s1)
-
-                s0 = s1
-
-            # BACKPROPAGATION
-            # NOTE no backpropagation in TDSearch
-
-            for a in self.env.actions(sroot):
-                root_values[a].append(self.Q(sroot, a))
-
-        # Select the root action with highest score
-        return self.policy_optimal(sroot), root_values
-
-    def TD_target(self, r, s1):
-        return r + self.gamma * max(self.Q(s1, a) for a in self.env.actions(s1))
+    plt.title(type(sm))
+    for (s, a), values in root_values.iteritems():
+        if a != 'stand':
+            plt.plot(values, label=str((s, a)))
+    plt.legend(loc=0)
 
 
 if __name__ == '__main__':
-    env = DiceEnv(nfaces=6, reroll_r=-1)
-
-    def run(smclass):
-        Q = ActionValues(env)
-        policy_tree = Policy_UCB1(env.actions, Q, beta=env.scale_r)
-        policy_dflt = Policy_random(env.actions)
-        sm = smclass(env, env.model, policy_tree, policy_dflt, Q=Q)
-
-        root_values = {}
-
-        actions = []
-        for s0 in env.states_start:
-            print 'state: {}'.format(s0)
-            # a, values = sm.run(s0, 50000)
-            a, values = sm.run(s0, 10000)
-            for a_ in env.actions(s0):
-                root_values[s0, a_] = values[a_]
-
-            print 'action: {}'.format(a)
-            print '---'
-            actions.append((s0, a))
-
-        print 'cache'
-        for s in env.states_start:
-            for a in env.actions(s):
-                print '{}: {}, {}'.format((s, a), Q(s, a), Q.n(s, a))
-
-        print 'optimal actions'
-        for s, a in actions:
-            print '{}: {}'.format(s, a)
-
-        print 'optimal actions'
-        for s in env.states_start:
-            for nrolls in xrange(5):
-                s_ = DiceState(s.npips, nrolls)
-                a = sm.policy_greedy.sample_a(s_)
-                print '{} ; {} ; {} ; {}'.format(s_, a, Q(s_, a), Q.n(s_, a))
-
-        plt.title(str(smclass))
-        for (s, a), values in root_values.iteritems():
-            if a != 'stand':
-                plt.plot(values, label=str((s, a)))
-        plt.legend(loc=0)
-
+    mdp = DiceMDP(nfaces=6, reroll_r=-1)
     
     print 'MCTS'
     print '===='
-    ax1 = plt.subplot(121)
-    run(MCTS)
-    print '==='
+
+    # NOTE tabular AV
+    Q = ActionValues_Tabular()
+    confidence = lambda sa: UCB_confidence_Q(sa, Q)
+    policy_tree = Policy_UCB(Q.value, confidence, beta=mdp.maxr)
+
+    # NOTE linear bayesian AV
+    # Q = ActionValues_LinearBayesian(l=100., s2=1.)
+    # Q = ActionValues_LinearBayesian(l2=100., s2=.1)
+    # confidence = Q.confidence
+    # policy_tree = Policy_UCB(Q.value, confidence, beta=mdp.maxr)
+
+    policy_dflt = Policy_random()
+    mcts = MCTS(mdp, mdp.model, policy_tree, policy_dflt, Q=Q)
+
+    for i in range(100):
+        s0 = mdp.model.sample_s0()
+        mcts.run(s0, 1000, verbose=true_every(100))
+
+    # for s0 in mdp.statelist_start:
+    # for s0 in mdp.statelist_start[::-1]:
+    #     mcts.run(s0, 100000, 1000, verbose=True)
+
+    print
+    print 'cache'
+    for s in mdp.statelist_start:
+        for a in mdp.actions(s):
+            sa = SAPair(s, a)
+            print '{}, {}: {:.2f}, {:.2f}'.format(s, a, Q(sa), confidence(sa))
+
+    print
+    print 'optimal_actions'
+    for s in mdp.statelist_start:
+        actions = mdp.actions(s)
+        print '{}: {}'.format(s, Q.optim_action(actions, s))
+
+    print
+    print 'optimal actions'
+    for s in mdp.statelist_start:
+        for nrolls in xrange(5):
+            s_ = DiceState(s.npips, nrolls)
+            actions = mdp.actions(s_)
+            a = Q.optim_action(actions, s_)
+            sa = SAPair(s_, a)
+            print '{} ; {} ; {:.2f} ; {:.2f}'.format(s_, a, Q(sa), confidence(sa))
 
 
-    print 'TDSearch'
-    print '===='
-    ax2 = plt.subplot(122, sharey=ax1)
-    run(TDSearch)
-    print '==='
+    try:
+        print 'Q.m:\n{}'.format(Q.m)
+    except AttributeError:
+        pass
 
-    plt.show()
+    # ax1 = plt.subplot(121)
+    # run(mdp, mcts)
+    # print '==='
+
+    # print 'TDSearch'
+    # print '===='
+    # Q = ActionValues(mdp)
+    # policy = Policy_UCB1(mdp.actions, Q, beta=mdp.maxr)
+    # tds = TDSearch(mdp, mdp.model, policy, Q=Q)
+
+    # ax2 = plt.subplot(122, sharey=ax1)
+    # run(mdp, tds)
+    # print '==='
+
+    # plt.show()
