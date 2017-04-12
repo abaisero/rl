@@ -28,10 +28,10 @@ class BinaryBandit(Bandit):
 
 
 class GaussianBandit(Bandit):
-    def __init__(self, m, s2):
+    def __init__(self, m, s):
         self.m = m
-        self.s2 = s2
-        self.rv = norm(m, s2)
+        self.s = s
+        self.rv = norm(m, s)
 
     def sample_r(self):
         return self.rv.rvs()
