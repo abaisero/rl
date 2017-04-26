@@ -3,32 +3,11 @@ from __future__ import division
 import math
 
 import numpy as np
-import numpy.random as rnd 
+import numpy.random as rnd
 
 from rl.problems import tstate, taction, SAPair
 
 
-def UCB_confidence_Q(sa, Q):
-    def confidence(sa):
-        san = Q.nupdates(sa)
-        sn = Q.nupdates_s(sa.s)
-
-        try:
-            _2logn = 2 * math.log(sn)
-        except ValueError:
-            _2logn = -np.inf
-        try:
-            return math.sqrt(_2logn / san)
-        except ZeroDivisionError:
-            return np.inf
-
-    if sa is None:
-        return confidence
-    else:
-        return confidence(sa)
-
-
-# TODO maybe different versions?
 def UCB_confidence(sa, sa_nupdates, s_nupdates):
     san = sa_nupdates(sa)
     sn = s_nupdates(sa.s)
@@ -41,6 +20,10 @@ def UCB_confidence(sa, sa_nupdates, s_nupdates):
         return math.sqrt(_2logn / san)
     except ZeroDivisionError:
         return np.inf
+
+
+def UCB_confidence_Q(sa, Q):
+    return UCB_confidence(sa, Q.nupdates, Q.nupdates_s)
 
 
 class Policy(object):
