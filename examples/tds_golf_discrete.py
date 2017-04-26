@@ -48,7 +48,7 @@ class GolfAction(Action):
 
     def __hash__(self):
         return hash(self.club)
-    
+
     def __eq__(self, other):
         return self.club == other.club
 
@@ -92,28 +92,38 @@ if __name__ == '__main__':
     rnd.seed(0)
 
     # NOTE this still breaks things a bit
-    # s0_from, s0_to = 90, 110
+    s0_from, s0_to = 90, 110
     # s0_from, s0_to = 15, 25
-    s0_from, s0_to = 19, 21
+    # s0_from, s0_to = 19, 21
     s0_dists = np.arange(s0_from, s0_to+1)
     # clubs = np.arange(1, 11)
     clubs = np.array([1, 2, 5, 10])
 
     mdp = GolfMDP(s0_dists, clubs)
 
-    # NOTE tabular AV, UCB policy
-    # Q = ActionValues_Tabular()
-    # confidence = lambda sa: UCB_confidence_Q(sa, Q)
-    # policy = Policy_UCB(Q.value, confidence, beta=mdp.maxr)
+    # NOTE choose between the following models
 
-    # NOTE linear AV, egreedy policy
-    # TODO this one is not working
+    # model 1: tabular AV, UCB policy
+    # works with both qlearning and sarsa
+    # Q = ActionValues_Tabular()
+    # def Q_confidence(sa): return UCB_confidence_Q(sa, Q)
+    # policy = Policy_UCB(Q.value, Q_confidence, beta=mdp.maxr)
+
+    # model 2: linear AV, egreedy policy
+    # doesn't work.  Best guess:  exploration does not cancel out bad updates
     # Q = ActionValues_Linear(.1)  # TODO I think right now the alpha is not used
     # policy = Policy_egreedy(Q, .1)
 
-    # NOTE bayesian linear AV, UCB policy
+    # model 3: bayesian linear AV, UCB policy
+    # works with both qlearning and sarsa (takes longer)
     Q = ActionValues_LinearBayesian(l2=100, s2=1)
     policy = Policy_UCB(Q.value, Q.confidence, beta=mdp.maxr)
+
+    # NOTE choose update method
+    # Q.update_method = 'sarsa'
+    Q.update_method = 'qlearning'
+
+    # TODO how to parametrize update function?  How to select here whether to use qlearning, or sarsa?
 
     tds = TDSearch(mdp, mdp.model, policy, Q)
 
@@ -123,7 +133,7 @@ if __name__ == '__main__':
 
     # TODO code to evaluate current solution:
     #  * print V(s0)
-    #  * simulate env many times with greedy policy, MC-evaluate V(s0) 
+    #  * simulate env many times with greedy policy, MC-evaluate V(s0)
     # * compare the two.
 
     # Also print out a few simulations to see if something weird happens

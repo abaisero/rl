@@ -24,7 +24,7 @@ class Values(object):
     def confidence(self, sa):
         raise NotImplementedError
 
-    def update(self, target, sa):
+    def update_target(self, target, sa):
         """ target is either the actual target, or just the instant reward """
         raise NotImplementedError
 
@@ -53,7 +53,7 @@ class Values_Tabular(Values):
     def nupdates_s(self, sa):
         return self.sdict.get(sa, 0)
 
-    def update(self, target, sa):
+    def update_target(self, target, sa):
         v = self.value(sa)
         n = self.nupdates(sa)
 
@@ -78,7 +78,7 @@ class Values_Linear(Values):
             return 0.
         return np.dot(sa.phi, self.beta)
 
-    def update(self, target, sa):
+    def update_target(self, target, sa):
         if self.beta is None:
             ndim = len(sa.phi)
             self.beta = np.zeros(ndim)
@@ -127,7 +127,7 @@ class Values_LinearBayesian(Values):
             # return np.inf
         return np.sqrt(la.multi_dot([sa.phi, self.S, sa.phi]))
 
-    def update(self, target, sa):
+    def update_target(self, target, sa):
         if self.A is None or self.b is None:
             ndim = len(sa.phi)
             self.A = np.eye(ndim) / self.l2
@@ -155,13 +155,32 @@ class Values_LinearBayesian(Values):
 
 
 class ActionValues(object):
+    # def update(self, method, **kwargs):
+    def update(self, r=None, gamma=None, s0=None, a0=None, s1=None, a1=None, actions=None):
+        if self.update_method == 'sarsa':
+            check = dict(r=r, gamma=gamma, s0=s0, a0=a0, s1=s1, a1=a1)
+            update = self.update_sarsa
+            args = r, gamma, SAPair(s0, a0), SAPair(s1, a1)
+        elif self.update_method == 'qlearning':
+            check = dict(r=r, gamma=gamma, s0=s0, a0=a0, s1=s1, actions=actions)
+            update = self.update_qlearning
+            args = r, gamma, SAPair(s0, a0), s1, actions
+        else:
+            raise ValuesException('Update target type {} not defined'.format(method))
+
+        args_none = [k for k, v in check.iteritems() if v is None]
+        if args_none:
+            raise ValuesException('Update target type {} requires {} not be None.'.format(method, args_none))
+
+        update(*args)
+
     def update_sarsa(self, r, gamma, sa0, sa1):
         target = r + gamma * self.value(sa1)
-        self.update(target, sa0)
+        self.update_target(target, sa0)
 
     def update_qlearning(self, r, gamma, sa, s, actions):
         target = r + gamma * self.optim_value(actions, s)
-        self.update(target, sa)
+        self.update_target(target, sa)
 
     def optim_value(self, actions, s):
         # if s is tstate:

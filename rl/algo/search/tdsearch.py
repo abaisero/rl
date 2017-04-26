@@ -137,7 +137,12 @@ class TDSearch(object):
                 # NOTE qlearning does not work here
                 # self.Q.update_qlearning(r, self.gamma, SAPair(s0, a0), s1, self.mdp.actions(s1))
                 # NOTE sarsa works here
-                self.Q.update_sarsa(r, self.gamma, SAPair(s0, a0), SAPair(s1, a1))
+                self.Q.update(r=r, gamma=self.gamma, s0=s0, a0=a0, s1=s1, a1=a1, actions=self.mdp.actions(s1))
+                # SAPair(s0, a0), SAPair(s1, a1))
+
+                # update('sarsa', r=r, gamma=self.gamma, s0=s0, a0=a0, s1=s1, a1=a1, actions=actions(s1))
+                # update('qlearning'
+
 
                 # for a in self.env.actions(sroot):
                 #     root_values[a].append(self.Q(sroot, a))

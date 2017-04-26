@@ -22,7 +22,7 @@ class GolfState(State):
         self.phi[0] = nstrokes
         self.phi[1:] = np.vander([dist], degree + 1)
 
-    # TODO I don't really need this when using value function approx, right?! 
+    # TODO I don't really need this when using value function approx, right?!
     def __hash__(self):
         return hash((self.dist, self.nstrokes))
 
@@ -49,7 +49,7 @@ class GolfAction(Action):
 
     def __hash__(self):
         return hash(self.club)
-    
+
     def __eq__(self, other):
         return self.club == other.club
 
@@ -144,15 +144,18 @@ if __name__ == '__main__':
     Q = ActionValues_LinearBayesian(l2=100, s2=1)
     policy = Policy_UCB(Q.value, Q.confidence, beta=mdp.maxr)
 
+    # Q.update_method = 'sarsa'
+    Q.update_method = 'qlearning'
+
     tds = TDSearch(mdp, mdp.model, policy, Q)
 
     for i in range(100):
         s0 = mdp.model.sample_s0()
-        tds.run(s0, 1000, verbose=true_every(100))
+        tds.run(s0, 1000, verbose=true_every(1))
 
     # TODO code to evaluate current solution:
     #  * print V(s0)
-    #  * simulate env many times with greedy policy, MC-evaluate V(s0) 
+    #  * simulate env many times with greedy policy, MC-evaluate V(s0)
     # * compare the two.
 
     # Also print out a few simulations to see if something weird happens
