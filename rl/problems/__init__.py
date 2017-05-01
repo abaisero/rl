@@ -124,9 +124,27 @@ class SAPair(object):
 
 class Model(object):
     """ State and Reward dynamics class
-    
+
     Represents real and learned problem dynamics.
     """
+
+    def pr_s0(self, s0=None):
+        raise NotImplementedError
+
+    def pr_s1(self, s0, a, s1=None):
+        raise NotImplementedError
+
+    def E_r(self, s0, a, s1):
+        pass
+
+    # def pr_rs1(self, s0, a, s1=None):
+    #     if s1 is not None:
+
+    # def pr_r(self, s0, a, s1, r=None):
+    #     raise NotImplementedError
+
+    # def pr_rs1(self, s0, a, rs1=None):
+    #     raise NotImplementedError
 
     def sample_s0(self):
         raise NotImplementedError
@@ -143,6 +161,18 @@ class Model(object):
         return r, s1
 
 
+class System(object):
+    """ System defines a statespace, actionspace, and dynamics """
+    def __init__(self, model):
+        self.model = model
+
+    def actions(self, s):
+        """ if the actionset depends on the state, this should be overridden """
+        if s is tstate:
+            return [taction]
+        return self.actionlist
+
+
 class RLProblem(object):
     """ RLProblem defines statespace, actionspace, and dynamics """
 
@@ -150,7 +180,7 @@ class RLProblem(object):
         self.model = model
 
     def actions(self, s):
-        """ if the actionset depends on the state, this should be overrode """
+        """ if the actionset depends on the state, this should be overridden """
         if s is tstate:
             return [taction]
         return self.actionlist
