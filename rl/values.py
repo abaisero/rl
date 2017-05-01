@@ -24,6 +24,9 @@ class Values(object):
     def confidence(self, sa):
         raise NotImplementedError
 
+    def update(self, value, sa):
+        raise NotImplementedError
+
     def update_target(self, target, sa):
         """ target is either the actual target, or just the instant reward """
         raise NotImplementedError
@@ -32,6 +35,20 @@ class Values(object):
         return self.value(sa)
 
 
+class Values_Lookup(Values):
+    def __init__(self, initv=0.):
+        super(Values_Lookup, self).__init__()
+        self.initv = 0.
+        self.vdict = {}
+
+    def value(self, sa):
+        return self.vdict.get(sa, self.initv)
+
+    def update(self, value, sa):
+        self.vdict[sa] = value
+
+
+# TODO separate notion of tabular with notion of tabular with update function
 class Values_Tabular(Values):
     def __init__(self, initv=0.):
         super(Values_Tabular, self).__init__()
@@ -50,8 +67,8 @@ class Values_Tabular(Values):
     def nupdates(self, sa):
         return self.vn(sa)[1]
 
-    def nupdates_s(self, sa):
-        return self.sdict.get(sa, 0)
+    def nupdates_s(self, s):
+        return self.sdict.get(s, 0)
 
     def update_target(self, target, sa):
         v = self.value(sa)
@@ -154,6 +171,21 @@ class Values_LinearBayesian(Values):
 #         return max(actions, key=lambda a: sum(p * self[s1] for p, s1, _ in self.model.PR_iter(s, a)))
 
 
+class StateValues(object):
+    def optim_actions(self, actions, s):
+        def expected_next_value(a):
+            # pr_s1 = np.array([model.pr_s1(s0, a, s1) for s1 in XXX])
+            # value_s1 = np.array([self.value(s1) for s1 in XXX])
+            # return np.dot(pr_s1, value_s1)
+            return sum(model.pr_s1(s0, a, s1) * (model.E_r(s0, a, s1) + gamma * self.value(s1)) for s1 in BLARG)
+        return argmax(expected_next_value, actions, all_=True)
+
+    def optim_action(self, actions, s):
+        optim_actions = self.optim_actions(actions, s)
+        ai = rnd.choice(len(optim_actions))
+        return optim_actions[ai]
+
+
 class ActionValues(object):
     # def update(self, method, **kwargs):
     def update(self, r=None, gamma=None, s0=None, a0=None, s1=None, a1=None, actions=None):
@@ -201,6 +233,19 @@ class ActionValues(object):
         optim_actions = self.optim_actions(actions, s)
         ai = rnd.choice(len(optim_actions))
         return optim_actions[ai]
+
+
+class StateValues_Lookup(StateValues, Values_Lookup):
+    pass
+
+class StateValues_Tabular(StateValues, Values_Tabular):
+    pass
+
+class StateValues_Linear(StateValues, Values_Linear):
+    pass
+
+class StateValues_LinearBayesian(StateValues, Values_LinearBayesian):
+    pass
 
 
 class ActionValues_Tabular(ActionValues, Values_Tabular):
