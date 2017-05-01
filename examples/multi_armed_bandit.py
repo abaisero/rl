@@ -32,7 +32,7 @@ if __name__ == '__main__':
         if i % 100 == 0:
             print '{} {}'.format(b, r)
         # NOTE I have to use SAPair because policy uses SAPair.
-        Q.update_target(r, SAPair(None, b))
+        Q.update_target(SAPair(a=b), r)
         # agent.feedback(a, r)
 
     print

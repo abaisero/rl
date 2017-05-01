@@ -69,7 +69,7 @@ if __name__ == '__main__':
 
         if i % 1000 == 0:
             print '{} {} {}'.format(s, b, r)
-        Q.update_target(r, SAPair(s, b))
+        Q.update_target(SAPair(s, b), r)
         # agent.feedback(SAPair(s, b), r)
 
     print

@@ -20,7 +20,7 @@ class BanditAgent(Agent):
         return b, r
 
     def feedback(self, a, r):
-        self.Q.update_target(r, SAPair(None, a))
+        self.Q.update_target(SAPair(a=a), r)
 
 
 # TODO sometimes agent and policy are different things.. sometimes they are the

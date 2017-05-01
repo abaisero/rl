@@ -24,10 +24,10 @@ class Values(object):
     def confidence(self, sa):
         raise NotImplementedError
 
-    def update(self, value, sa):
+    def update(self, sa, value):
         raise NotImplementedError
 
-    def update_target(self, target, sa):
+    def update_target(self, sa, target):
         """ target is either the actual target, or just the instant reward """
         raise NotImplementedError
 
@@ -70,7 +70,7 @@ class Values_Tabular(Values):
     def nupdates_s(self, s):
         return self.sdict.get(s, 0)
 
-    def update_target(self, target, sa):
+    def update_target(self, sa, target):
         v = self.value(sa)
         n = self.nupdates(sa)
 
@@ -95,7 +95,7 @@ class Values_Linear(Values):
             return 0.
         return np.dot(sa.phi, self.beta)
 
-    def update_target(self, target, sa):
+    def update_target(self, sa, target):
         if self.beta is None:
             ndim = len(sa.phi)
             self.beta = np.zeros(ndim)
@@ -144,7 +144,7 @@ class Values_LinearBayesian(Values):
             # return np.inf
         return np.sqrt(la.multi_dot([sa.phi, self.S, sa.phi]))
 
-    def update_target(self, target, sa):
+    def update_target(self, sa, target):
         if self.A is None or self.b is None:
             ndim = len(sa.phi)
             self.A = np.eye(ndim) / self.l2
@@ -208,11 +208,11 @@ class ActionValues(object):
 
     def update_sarsa(self, r, gamma, sa0, sa1):
         target = r + gamma * self.value(sa1)
-        self.update_target(target, sa0)
+        self.update_target(sa0, target)
 
     def update_qlearning(self, r, gamma, sa, s, actions):
         target = r + gamma * self.optim_value(actions, s)
-        self.update_target(target, sa)
+        self.update_target(sa, target)
 
     def optim_value(self, actions, s):
         # if s is tstate:
