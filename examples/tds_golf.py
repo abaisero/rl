@@ -4,7 +4,7 @@ from scipy.stats import norm
 from rl.problems import tstate, State, Action, SAPair, Model
 from rl.problems.mdp import MDP
 from rl.values import ActionValues_Tabular, ActionValues_Linear, ActionValues_LinearBayesian
-from rl.policy import Policy_random, Policy_egreedy, Policy_UCB, UCB_confidence_Q
+from rl.policy import Policy_random, Policy_egreedy, Policy_UCB
 from rl.algo.search import TDSearch
 
 from pytk.util import true_every
@@ -21,6 +21,9 @@ class GolfState(State):
         self.phi = np.empty(degree + 2)
         self.phi[0] = nstrokes
         self.phi[1:] = np.vander([dist], degree + 1)
+
+        degree = 3
+        self.phi = np.vander([dist], degree + 1).ravel()
 
     # TODO I don't really need this when using value function approx, right?!
     def __hash__(self):
@@ -62,6 +65,8 @@ class GolfModel(Model):
         super(GolfModel, self).__init__()
         self.s0dist_rv = norm(s0dist_m, s0dist_s)
 
+        self.maxr = 10
+
     def sample_s0(self):
         s0dist = abs(self.s0dist_rv.rvs())
         return GolfState(s0dist, 0)
@@ -98,7 +103,7 @@ class GolfModel(Model):
         return GolfState(s1dist, s0.nstrokes + 1)
 
     def sample_r(self, s0, a, s1):
-        return 0. if s1 == tstate else -1.
+        return 10. if s1 == tstate else -1.
 
 
 class GolfMDP(MDP):
@@ -107,7 +112,6 @@ class GolfMDP(MDP):
         super(GolfMDP, self).__init__(GolfModel(s0dist_m, s0dist_s))
 
         self.clubs = clubs
-        self.maxr = 1
 
         # self.clubs = ['wood', 'iron', 'putter']
         # self.strengths = [.5, 1, 2]
@@ -126,7 +130,8 @@ if __name__ == '__main__':
     # policy = Policy_UCB(env.actions, Q.value, Q.confidence, beta=10.)
     # # policy = Policy_egreedy(env.actions, Q, .5)
 
-    s0dist_m, s0dist_s = 20, 5
+    # s0dist_m, s0dist_s = 20, 5
+    s0dist_m, s0dist_s = 50, 0
     clubs = [
         ('wood', 10, 5, .9),
         ('iron', 5, .5, .5),
@@ -142,16 +147,37 @@ if __name__ == '__main__':
 
     # NOTE bayesian linear AV, UCB policy
     Q = ActionValues_LinearBayesian(l2=100, s2=1)
-    policy = Policy_UCB(Q.value, Q.confidence, beta=mdp.maxr)
+    policy = Policy_UCB(Q.value, Q.confidence, beta=mdp.model.maxr)
 
-    # Q.update_method = 'sarsa'
-    Q.update_method = 'qlearning'
+    Q.update_method = 'sarsa'
+    # Q.update_method = 'qlearning'
 
     tds = TDSearch(mdp, mdp.model, policy, Q)
 
-    for i in range(100):
+    from rl.algo.greedy import GreedyAgent
+    ga = GreedyAgent(mdp, mdp.model, Q)
+
+    # v = true_every(100)
+    for i in xrange(10000):
         s0 = mdp.model.sample_s0()
-        tds.run(s0, 1000, verbose=true_every(1))
+        tds.run(s0, 1)
+
+
+        if i % 100 == 0:
+            s0 = mdp.model.sample_s0()
+            m, v = ga.evaluate(s0, 1000)
+
+            print '---'
+            print 'Empirical: {:>6.2f}; {:>6.2f}'.format(m, v)
+
+        #     actions = mdp.actions(s0)
+        #     a = Q.optim_action(actions, s0)
+        #     sa = SAPair(s0, a)
+        #     Qm = Q.value(sa)
+        #     Qv = Q.confidence(sa)
+
+        #     print 'Model    : {:>6.2f}; {:>6.2f}'.format(Qm, Qv)
+
 
     # TODO code to evaluate current solution:
     #  * print V(s0)

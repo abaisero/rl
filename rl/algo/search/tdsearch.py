@@ -107,50 +107,29 @@ class TDSearch(object):
             actions0 = self.mdp.actions(s0)
             a0 = self.policy.sample_a(actions0, s0)
 
-            # try:
-            #     self.Q.reset()
-            # except AttributeError:
-            #     pass
-
             verbose_ = bool(verbose)
             if verbose_:
                 print '---'
             while s0 is not tstate:
-                r, s1 = self.model.sample_rs1(s0, a0)
-                actions1 = self.mdp.actions(s1)
-                a1 = self.policy.sample_a(actions1, s1)
-
-                if verbose_:
-                    print '{}, {}, {}, {}, {}'.format(s0, a0, r, s1, a1)
-                # print '{}\t{}\t{:.2f}\t{}\t{}'.format(s0, a, self.Q(s0, a), r, s1)
-
-                # TODO abstract away the type of target? MC target, TD, TDl
-                # target = r + self.gamma * self.Q(s1, a1)
-                # TODO this is Q learning...
-                # TODO a different type of update..
-
-                # a1 = self.policy.sample_a(self.mdp.actions(s1), s1)
-                # Q1 = self.Q(SAPair(s1, a1)
-
-                # target = r + self.gamma * self.Q.optim_value(self.mdp.actions(s1), s1)
-                # self.Q.update(target, SAPair(s0, a))
-                # NOTE qlearning does not work here
-                # self.Q.update_qlearning(r, self.gamma, SAPair(s0, a0), s1, self.mdp.actions(s1))
-                # NOTE sarsa works here
-                self.Q.update(r=r, gamma=self.gamma, s0=s0, a0=a0, s1=s1, a1=a1, actions=self.mdp.actions(s1))
-                # SAPair(s0, a0), SAPair(s1, a1))
-
-                # update('sarsa', r=r, gamma=self.gamma, s0=s0, a0=a0, s1=s1, a1=a1, actions=actions(s1))
-                # update('qlearning'
-
-
-                # for a in self.env.actions(sroot):
-                #     root_values[a].append(self.Q(sroot, a))
-
-                s0 = s1
-                a0 = a1
+                s0, a0 = self.runonce(s0, a0, verbose_)
 
         # Select the root action with highest score
         actions = self.mdp.actions(sroot)
         return self.Q.optim_action(actions, sroot)
         # return self.Q.optim_action(sroot), root_values
+
+    def runonce(self, s0, a0=None, verbose=False):
+        if a0 is None:
+            a0 = self.policy.sample_a(actions0, s0)
+
+        if s0 is not tstate:
+            r, s1 = self.model.sample_rs1(s0, a0)
+            actions1 = self.mdp.actions(s1)
+            a1 = self.policy.sample_a(actions1, s1)
+
+            if verbose:
+                print '{}, {}, {}, {}, {}'.format(s0, a0, r, s1, a1)
+
+            self.Q.update(r=r, gamma=self.gamma, s0=s0, a0=a0, s1=s1, a1=a1, actions=self.mdp.actions(s1))
+
+        return s1, a1

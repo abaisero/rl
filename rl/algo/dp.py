@@ -1,4 +1,6 @@
-from .bellman import bellman_statevalues
+from rl.problems import SAPair
+
+import bellman
 
 
 class policy_iteration(object):
@@ -58,3 +60,13 @@ class value_iteration(object):
 
         for s in self.env.states():
             self.policy[s] = self.bellman.optim_argmax(s)
+
+
+def value_iteration(sys, V, gamma):
+    delta = 1
+    while delta > 1e-8:
+        delta = 0
+        for s in sys.statelist:
+            v = bellman.equation_optim(sys, s, V, gamma)
+            delta = max(delta, abs(v - V(SAPair(s))))
+            V.update(v, SAPair(s))

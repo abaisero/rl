@@ -61,6 +61,8 @@ class GolfModel(Model):
         super(GolfModel, self).__init__()
         self.s0_dists = s0_dists
 
+        self.maxr = 1
+
     def sample_s0(self):
         dist = rnd.choice(self.s0_dists)
         return GolfState(dist, 0)
@@ -81,7 +83,6 @@ class GolfMDP(MDP):
         super(GolfMDP, self).__init__(GolfModel(s0_dists))
 
         self.clubs = clubs
-        self.maxr = 1
 
         # self.statelist_start =   # TODO I don't think I need this?
         self.actionlist = [GolfAction(club, clubs) for club in clubs]
@@ -92,9 +93,9 @@ if __name__ == '__main__':
     rnd.seed(0)
 
     # NOTE this still breaks things a bit
-    s0_from, s0_to = 90, 110
+    # s0_from, s0_to = 90, 110
     # s0_from, s0_to = 15, 25
-    # s0_from, s0_to = 19, 21
+    s0_from, s0_to = 19, 21
     s0_dists = np.arange(s0_from, s0_to+1)
     # clubs = np.arange(1, 11)
     clubs = np.array([1, 2, 5, 10])
@@ -105,9 +106,9 @@ if __name__ == '__main__':
 
     # model 1: tabular AV, UCB policy
     # works with both qlearning and sarsa
-    # Q = ActionValues_Tabular()
-    # def Q_confidence(sa): return UCB_confidence_Q(sa, Q)
-    # policy = Policy_UCB(Q.value, Q_confidence, beta=mdp.maxr)
+    Q = ActionValues_Tabular()
+    def Q_confidence(sa): return UCB_confidence_Q(sa, Q)
+    policy = Policy_UCB(Q.value, Q_confidence, beta=mdp.model.maxr)
 
     # model 2: linear AV, egreedy policy
     # doesn't work.  Best guess:  exploration does not cancel out bad updates
@@ -116,12 +117,12 @@ if __name__ == '__main__':
 
     # model 3: bayesian linear AV, UCB policy
     # works with both qlearning and sarsa (takes longer)
-    Q = ActionValues_LinearBayesian(l2=100, s2=1)
-    policy = Policy_UCB(Q.value, Q.confidence, beta=mdp.maxr)
+    # Q = ActionValues_LinearBayesian(l2=100, s2=1)
+    # policy = Policy_UCB(Q.value, Q.confidence, beta=mdp.model.maxr)
 
     # NOTE choose update method
-    # Q.update_method = 'sarsa'
-    Q.update_method = 'qlearning'
+    Q.update_method = 'sarsa'
+    # Q.update_method = 'qlearning'
 
     # TODO how to parametrize update function?  How to select here whether to use qlearning, or sarsa?
 

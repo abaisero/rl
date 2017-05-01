@@ -11,11 +11,16 @@ class BanditAgent(Agent):
         self.Q = Q
         self.policy = policy
 
-    def sample_a(self):
+    def sample_b(self):
         return self.policy.sample_a(self.mab.actionlist)
 
+    def sample_br(self):
+        b = self.sample_b()
+        r = b.sample_r()
+        return b, r
+
     def feedback(self, a, r):
-        self.Q.update(r, SAPair(None, a))
+        self.Q.update_target(r, SAPair(None, a))
 
 
 # TODO sometimes agent and policy are different things.. sometimes they are the
