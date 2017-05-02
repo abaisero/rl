@@ -75,5 +75,14 @@ class MAB(RLProblem):
         super(MAB, self).__init__(MABModel(bandits))
         self.actionlist = bandits
 
-        self.maxr = max(b.maxr for b in self.model.bandits)
-        self.optimb = argmax(lambda b: b.Er, bandits, all_=True)
+        # NOTE these are properties because we might have non-stationary bandits
+        # self.maxr = max(b.maxr for b in bandits)
+        # self.optimb = argmax(lambda b: b.Er, bandits, all_=True)
+
+    @property
+    def maxr(self):
+        return max(b.maxr for b in self.model.bandits)
+
+    @property
+    def optimb(self):
+        return argmax(lambda b: b.Er, self.model.bandits, all_=True)

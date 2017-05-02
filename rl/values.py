@@ -55,8 +55,13 @@ class Values_Tabular(Values):
 
 # TODO separate notion of tabular with notion of tabular with tabular with counter
 class Values_TabularCounted(Values_Tabular):
-    def __init__(self, initvalue=0.):
+    def __init__(self, initvalue=0., stepsize=None):
         super(Values_TabularCounted, self).__init__(initvalue)
+
+        if stepsize is None:
+            stepsize = lambda n: 1 / (n+1)
+
+        self.stepsize = stepsize
         self.__counter_sa = defaultdict(lambda: 0, {})
         self.__counter_s = defaultdict(lambda: 0, {})
         self.__counter_a = defaultdict(lambda: 0, {})
@@ -80,41 +85,8 @@ class Values_TabularCounted(Values_Tabular):
         v = self.value(sa)
         n = self.nupdates_sa(sa)
 
-        vnew = v + (target - v) / (n + 1)
+        vnew = v + self.stepsize(n) * (target - v)
         self.update_value(sa, vnew)
-
-
-# # TODO separate notion of tabular with notion of tabular with tabular with counter
-# class Values_Tabular(Values):
-#     def __init__(self, initv=0.):
-#         super(Values_Tabular, self).__init__()
-#         self.initv = initv
-#         self.sadict = {}
-#         self.sdict = {}
-
-#     def vn(self, sa):
-#         return self.sadict.get(sa, (self.initv, 0))
-
-#     def value(self, sa):
-#         if sa.s is tstate:
-#             return 0.
-#         return self.vn(sa)[0]
-
-#     def nupdates(self, sa):
-#         return self.vn(sa)[1]
-
-#     def nupdates_s(self, s):
-#         return self.sdict.get(s, 0)
-
-#     def update_target(self, sa, target):
-#         v = self.value(sa)
-#         n = self.nupdates(sa)
-
-#         v += (target - v) / (n + 1)
-#         n += 1
-
-#         self.sadict[sa] = v, n
-#         self.sdict[sa.s] = self.nupdates_s(sa.s) + 1
 
 
 class Values_Linear(Values):

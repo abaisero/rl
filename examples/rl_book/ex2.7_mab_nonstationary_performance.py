@@ -4,6 +4,7 @@ import numpy as np
 from scipy.stats import norm
 
 from rl.problems import SAPair
+from rl.problems.bandits import Bandit
 from rl.problems.bandits.mab import GaussianBandit, MAB
 from rl.values import ActionValues_TabularCounted
 from rl.policy import Policy_egreedy, Policy_softmax
@@ -11,9 +12,32 @@ from rl.policy import Policy_egreedy, Policy_softmax
 import matplotlib.pyplot as plt
 
 
+class GaussianBandit_Nonstationary(Bandit):
+    def __init__(self, m, s):
+        super(GaussianBandit_Nonstationary, self).__init__()
+        self.m = m
+        self.s = s
+
+    @property
+    def maxr(self):
+        return max(abs(self.m + 3 * self.s), abs(self.m - 3 * self.s))
+
+    @property
+    def Er(self):
+        return self.m
+
+    def sample_r(self):
+        return norm.rvs(self.m, self.s)
+
+    def randomwalk(self):
+        """ Bandit nonstationarity """
+        self.m += norm.rvs(0, .02)
+
+
 class Agent(object):
-    def __init__(self, name, policy_cls, *policy_args, **policy_kwargs):
+    def __init__(self, name, stepsize, policy_cls, *policy_args, **policy_kwargs):
         self.name = name
+        self.stepsize = stepsize
         self.policy_cls = policy_cls
         self.policy_args = policy_args
         self.policy_kwargs = policy_kwargs
@@ -21,7 +45,7 @@ class Agent(object):
 
     def reset(self):
         self.policy = self.policy_cls(
-            ActionValues_TabularCounted(),
+            ActionValues_TabularCounted(stepsize=self.stepsize),
             *self.policy_args,
             **self.policy_kwargs
         )
@@ -45,6 +69,9 @@ def play_once(mab, agent, nrounds):
 
         rewardlist[i] = r
         optimlist[i] = b in mab.optimb
+
+        for b in mab.model.bandits:
+            b.randomwalk()
 
     return rewardlist, optimlist
 
@@ -70,20 +97,16 @@ if __name__ == '__main__':
 
     nbandits = 10
     def mab_maker():
-        bandits = [GaussianBandit(norm.rvs(), 1) for i in xrange(nbandits)]
+        bandits = [GaussianBandit_Nonstationary(norm.rvs(), 1) for i in xrange(nbandits)]
         return MAB(bandits)
 
     agents = [
-        Agent('greedy', Policy_egreedy, 0),
-        Agent('.1-greedy', Policy_egreedy, .1),
-        Agent('.01-greedy', Policy_egreedy, .01),
-        Agent('softmax(tau=.1)', Policy_softmax, .1),
-        Agent('softmax(tau=.3)', Policy_softmax, .3),
-        Agent('softmax(tau=1)', Policy_softmax, 1),
+        Agent('.1-greedy(alpha=1/(k+1))', lambda n: 1/(n+1), Policy_egreedy, .1),
+        Agent('.1-greedy(alpha=.1)', lambda n: .1, Policy_egreedy, .1),
     ]
 
     nepisodes = 2000  # number of runs
-    nrounds = 1000  # number of rounds per run
+    nrounds = 2000  # number of rounds per run
 
     rewards, optims = play_all(mab_maker, agents, nepisodes, nrounds)
     rewards = np.mean(rewards, axis=1)  # average over all runs  (but not over rounds)
@@ -91,11 +114,13 @@ if __name__ == '__main__':
 
 
     ### plotting;  unimportant wrt the topic at hand
+    # TODO also plot the performance of the same agents in stationary mab system
+    # TODO the performance doesn't seem to be suffering from the non-stationarity.. investigate
 
     ax = plt.subplot(211)
     for agent, reward in zip(agents, rewards):
         plt.plot(reward, label=agent.name)
-    plt.ylim([0, 1.6])
+    plt.ylim([0, 2])
     box = ax.get_position()
     ax.set_position([box.x0, box.y0, box.width * 0.6, box.height])
     plt.legend(loc='center left', bbox_to_anchor=(1, .5), fancybox=True, shadow=True)
@@ -108,5 +133,5 @@ if __name__ == '__main__':
     ax.set_position([box.x0, box.y0, box.width * 0.6, box.height])
     plt.legend(loc='center left', bbox_to_anchor=(1, .5), fancybox=True, shadow=True)
 
-    # plt.savefig('ex2.2.png')
+    plt.savefig('ex2.7.png')
     plt.show()
