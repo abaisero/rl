@@ -1,9 +1,13 @@
 from rl.problems import SAPair
 
 
+# TODO As opposed to a policy, an agent has an identity--typically but not
+# necessarily sufficiently a name--and may be able to collect statistics about
+# its own existence and its own experience
 class Agent(object):
     def sample_a(self):
         pass
+
 
 class BanditAgent(Agent):
     def __init__(self, mab, Q, policy):
@@ -21,8 +25,3 @@ class BanditAgent(Agent):
 
     def feedback(self, a, r):
         self.Q.update_target(SAPair(a=a), r)
-
-
-# TODO sometimes agent and policy are different things.. sometimes they are the
-# same
-# NOTE what if I give the possible actions to the policy

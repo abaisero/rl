@@ -1,13 +1,17 @@
+import numpy as np
 import numpy.random as rnd
 from scipy.stats import norm
 
 from .. import Action, Model, RLProblem
-from . import Bandit, BanditAction
+from . import Bandit
+
+from pytk.util import argmax
 
 
 ###############################################################################
 ## BANDITS
 ###############################################################################
+
 
 class BinaryBandit(Bandit):
     def __init__(self, p):
@@ -17,6 +21,7 @@ class BinaryBandit(Bandit):
         self.p = p
 
         self.maxr = 1
+        self.Er = p
 
     def sample_r(self):
         return int(rnd.uniform() < self.p)
@@ -30,6 +35,7 @@ class GaussianBandit(Bandit):
         self.rv = norm(m, s)
 
         self.maxr = max(abs(m + 3 * s), abs(m - 3 * s))
+        self.Er = m
 
     def sample_r(self):
         return self.rv.rvs()
@@ -42,6 +48,7 @@ class ChoiceBandit(Bandit):
         self.nchoices = len(choices)
 
         self.maxr = max(map(abs, choices))
+        self.Er = np.mean(choices)
 
     def sample_r(self):
         ci = rnd.choice(self.nchoices)
@@ -58,21 +65,15 @@ class MABModel(Model):
         for bidx, b in enumerate(bandits):
             b.bidx = bidx
         self.bandits = bandits
-        # self.nbandits = len(bandits)
 
     def sample_r(self, b):
-        # bidx = self.bandits.index(b)
-        # return self.bandits[bidx].sample_r()
         return b.sample_r()
 
 
 class MAB(RLProblem):
     def __init__(self, bandits):
         super(MAB, self).__init__(MABModel(bandits))
-        # self.actionlist = map(BanditAction, xrange(self.model.nbandits))
         self.actionlist = bandits
 
         self.maxr = max(b.maxr for b in self.model.bandits)
-
-    # def sample_r(self, a):
-    #     return self.model.sample_r(a)
+        self.optimb = argmax(lambda b: b.Er, bandits, all_=True)

@@ -63,7 +63,7 @@ class Policy_softmax(Policy_Qbased):
         self.temp = temp
 
     def sample_a(self, actions, s=None):
-        Qs = np.array([self.Q(SAPair(s, a) for a in actions])
+        Qs = np.array([self.Q(SAPair(s, a)) for a in actions])
         pr_a = np.exp(Qs / self.temp)
         pr_a /= pr_a.sum()
 
