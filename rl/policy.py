@@ -43,6 +43,7 @@ class Policy_Qbased(Policy):
     def __init__(self, Q):
         self.Q = Q
 
+
 class Policy_egreedy(Policy_Qbased):
     def __init__(self, Q, e=0.):
         super(Policy_egreedy, self).__init__(Q)
@@ -56,30 +57,18 @@ class Policy_egreedy(Policy_Qbased):
         return actions[ai]
 
 
-# class Policy_UCB1(Policy_Qbased):
-#     def __init__(self, actions, Q, beta=1.):
-#         super(Policy_UCB1, self).__init__(actions, Q)
-#         self.beta = beta
+class Policy_softmax(Policy_Qbased):
+    def __init__(self, Q, temp=1.):
+        super(Policy_softmax, self).__init__(Q)
+        self.temp = temp
 
-#     def sample_a(self, s=None):
-#         # TODO this does not work..
+    def sample_a(self, actions, s=None):
+        Qs = np.array([self.Q(SAPair(s, a) for a in actions])
+        pr_a = np.exp(Qs / self.temp)
+        pr_a /= pr_a.sum()
 
-#         actions = self.actions(s)
-#         mus = np.array([self.Q(s, a) for a in actions])
-#         ns = np.array([self.Q.n(s, a) for a in actions])
-
-#         try:
-#             _2logntot = 2 * math.log(ns.sum())
-#         except ValueError:
-#             _2logntot = -np.inf
-#         with np.errstate(all='ignore'):
-#             sigmas = np.sqrt(_2logntot / ns)
-#         ucbs = mus + np.nan_to_num(self.beta * sigmas)
-#         max_ucb = max(ucbs)
-#         max_actions = [a for a, a_ucb in zip(actions, ucbs) if a_ucb == max_ucb]
-
-#         ai = rnd.choice(len(max_actions))
-#         return max_actions[ai]
+        ai = rnd.choice(len(actions), p=pr_a)
+        return actions[ai]
 
 
 class Policy_UCB(Policy):
@@ -99,6 +88,3 @@ class Policy_UCB(Policy):
 
         ai = rnd.choice(len(max_actions))
         return max_actions[ai]
-
-
-# TODO some policies depend on a state, others don't...
