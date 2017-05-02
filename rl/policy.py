@@ -1,5 +1,6 @@
 from __future__ import division
 
+from collections import defaultdict
 import math
 
 import numpy as np
@@ -27,7 +28,8 @@ def UCB_confidence_Q(sa, Q):
 
 
 class Policy(object):
-    pass
+    def sample_a(self, actions, s=None):
+        raise NotImplementedError
     # TODO I don't think I need this
     # def sample_a(self, actions, s=None):
     #     if s is tstate:
@@ -61,14 +63,70 @@ class Policy_egreedy(Policy_Qbased):
         return actions[ai]
 
 
-class Policy_softmax(Policy_Qbased):
-    def __init__(self, Q, temp=1.):
-        super(Policy_softmax, self).__init__(Q)
-        self.temp = temp
+# TODO change softmax to incorporate policy comparison stuff
+# class Policy_softmax(Policy_Qbased):
+#     def __init__(self, Q, temp=1.):
+#         super(Policy_softmax, self).__init__(Q)
+#         self.temp = temp
 
-    def sample_a(self, actions, s=None):
-        Qs = np.array([self.Q(SAPair(s, a)) for a in actions])
-        pr_a = np.exp(Qs / self.temp)
+#     def sample_a(self, actions, s=None):
+#         Qs = np.array([self.Q(SAPair(s, a)) for a in actions])
+#         pr_a = np.exp(Qs / self.temp)
+#         pr_a /= pr_a.sum()
+
+#         ai = rnd.choice(len(actions), p=pr_a)
+#         return actions[ai]
+
+
+class Preference(object):
+    def value(self, a):
+        raise NotImplementedError
+
+    def values(self, actions):
+        return np.array(map(self.value, actions))
+
+    def update_value(self, a, r):
+        raise NotImplementedError
+
+
+class Preference_P(Preference):
+    def __init__(self, alpha, beta, ref=0.):
+        super(Preference_P, self).__init__()
+        self.alpha = alpha
+        self.beta = beta
+        self.ref = ref
+
+        self.p = defaultdict(lambda: 0., {})
+
+    def value(self, a):
+        return self.p[a]
+
+    def update_target(self, a, r):
+        rdiff = r - self.ref
+        self.p[a] += self.beta * rdiff
+        self.ref += self.alpha * rdiff
+
+
+class Preference_Q(Preference):
+    def __init__(self, Q, tau=1.):
+        super(Preference_Q, self).__init__()
+        self.Q = Q
+        self.tau = tau
+
+    def value(self, a):
+        return self.Q(SAPair(a=a)) / self.tau
+
+    def update_target(self, a, r):
+        self.Q.update_target(SAPair(a=a), r)
+
+
+class Policy_softmax(Policy):
+    def __init__(self, pref):
+        super(Policy_softmax, self).__init__()
+        self.pref = pref
+
+    def sample_a(self, actions):
+        pr_a = np.exp(self.pref.values(actions))
         pr_a /= pr_a.sum()
 
         ai = rnd.choice(len(actions), p=pr_a)
