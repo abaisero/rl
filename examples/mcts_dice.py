@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 
 from rl.problems import tstate, State, Action, SAPair, Model
 from rl.problems.mdp import MDP
-from rl.values import ActionValues_Tabular, ActionValues_LinearBayesian
+from rl.values import ActionValues_TabularCounted, ActionValues_LinearBayesian
 from rl.policy import Policy_random, Policy_UCB, UCB_confidence_Q
 from rl.algo.search import MCTS, TDSearch
 
@@ -123,20 +123,19 @@ def run(mdp, sm):
 
 if __name__ == '__main__':
     mdp = DiceMDP(nfaces=6, reroll_r=-1)
-    
+
     print 'MCTS'
     print '===='
 
     # NOTE tabular AV
-    Q = ActionValues_Tabular()
-    confidence = lambda sa: UCB_confidence_Q(sa, Q)
+    Q = ActionValues_TabularCounted()
+    def confidence(sa): return UCB_confidence_Q(sa, Q)
     policy_tree = Policy_UCB(Q.value, confidence, beta=mdp.maxr)
 
     # NOTE linear bayesian AV
     # Q = ActionValues_LinearBayesian(l=100., s2=1.)
     # Q = ActionValues_LinearBayesian(l2=100., s2=.1)
-    # confidence = Q.confidence
-    # policy_tree = Policy_UCB(Q.value, confidence, beta=mdp.maxr)
+    # policy_tree = Policy_UCB(Q.value, Q.confidence, beta=mdp.maxr)
 
     policy_dflt = Policy_random()
     mcts = MCTS(mdp, mdp.model, policy_tree, policy_dflt, Q=Q)

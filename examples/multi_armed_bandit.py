@@ -2,7 +2,7 @@ import numpy.random as rnd
 
 from rl.problems import SAPair
 from rl.problems.bandits.mab import GaussianBandit, MAB
-from rl.values import Values_Tabular
+from rl.values import Values_TabularCounted
 from rl.policy import Policy_UCB, UCB_confidence_Q
 from rl.algo.bandits import BanditAgent
 
@@ -15,7 +15,7 @@ if __name__ == '__main__':
     ]
     mab = MAB(bandits)
 
-    Q = Values_Tabular()
+    Q = Values_TabularCounted()
     def Q_confidence(sa): return UCB_confidence_Q(sa, Q)
     policy = Policy_UCB(Q.value, Q_confidence, beta=mab.maxr)
     # policy = Policy_UCB(Q.value, Q_confidence, beta=1.)
@@ -39,4 +39,5 @@ if __name__ == '__main__':
     print 'Final values'
     print '###'
     for b in bandits:
-        print '{} {}'.format(b, Q.vn(SAPair(None, b)))
+        sa = SAPair(a=b)
+        print '{} {} {}'.format(b, Q.value(sa), Q.nupdates_sa(sa))

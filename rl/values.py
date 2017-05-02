@@ -1,5 +1,6 @@
 from __future__ import division
 
+from collections import defaultdict
 import math
 
 import numpy as np
@@ -24,61 +25,96 @@ class Values(object):
     def confidence(self, sa):
         raise NotImplementedError
 
-    def update(self, sa, value):
+    def update_value(self, sa, value):
+        """ update the value exactly """
         raise NotImplementedError
 
     def update_target(self, sa, target):
-        """ target is either the actual target, or just the instant reward """
+        """ update the value such that it tends towards the target value """
         raise NotImplementedError
 
     def __call__(self, sa):
         return self.value(sa)
 
 
-class Values_Lookup(Values):
-    def __init__(self, initv=0.):
-        super(Values_Lookup, self).__init__()
-        self.initv = 0.
-        self.vdict = {}
-
-    def value(self, sa):
-        return self.vdict.get(sa, self.initv)
-
-    def update(self, value, sa):
-        self.vdict[sa] = value
-
-
-# TODO separate notion of tabular with notion of tabular with update function
+#  TODO change all references to this
 class Values_Tabular(Values):
-    def __init__(self, initv=0.):
+    def __init__(self, initvalue=0.):
         super(Values_Tabular, self).__init__()
-        self.initv = initv
-        self.sadict = {}
-        self.sdict = {}
-
-    def vn(self, sa):
-        return self.sadict.get(sa, (self.initv, 0))
+        self.initvalue = 0.
+        self.values = {}
 
     def value(self, sa):
         if sa.s is tstate:
             return 0.
-        return self.vn(sa)[0]
+        return self.values.get(sa, self.initvalue)
 
-    def nupdates(self, sa):
-        return self.vn(sa)[1]
+    def update_value(self, sa, value):
+        self.values[sa] = value
+
+
+# TODO separate notion of tabular with notion of tabular with tabular with counter
+class Values_TabularCounted(Values_Tabular):
+    def __init__(self, initvalue=0.):
+        super(Values_TabularCounted, self).__init__(initvalue)
+        self.__counter_sa = defaultdict(lambda: 0, {})
+        self.__counter_s = defaultdict(lambda: 0, {})
+        self.__counter_a = defaultdict(lambda: 0, {})
+
+    def nupdates_sa(self, sa):
+        return self.__counter_sa[sa]
 
     def nupdates_s(self, s):
-        return self.sdict.get(s, 0)
+        return self.__counter_s[s]
+
+    def nupdates_a(self, a):
+        return self.__counter_a[a]
+
+    def update_value(self, sa, value):
+        super(Values_TabularCounted, self).update_value(sa, value)
+        self.__counter_sa[sa] += 1
+        self.__counter_s[sa.s] += 1
+        self.__counter_a[sa.a] += 1
 
     def update_target(self, sa, target):
         v = self.value(sa)
-        n = self.nupdates(sa)
+        n = self.nupdates_sa(sa)
 
-        v += (target - v) / (n + 1)
-        n += 1
+        vnew = v + (target - v) / (n + 1)
+        self.update_value(sa, vnew)
 
-        self.sadict[sa] = v, n
-        self.sdict[sa.s] = self.nupdates_s(sa.s) + 1
+
+# # TODO separate notion of tabular with notion of tabular with tabular with counter
+# class Values_Tabular(Values):
+#     def __init__(self, initv=0.):
+#         super(Values_Tabular, self).__init__()
+#         self.initv = initv
+#         self.sadict = {}
+#         self.sdict = {}
+
+#     def vn(self, sa):
+#         return self.sadict.get(sa, (self.initv, 0))
+
+#     def value(self, sa):
+#         if sa.s is tstate:
+#             return 0.
+#         return self.vn(sa)[0]
+
+#     def nupdates(self, sa):
+#         return self.vn(sa)[1]
+
+#     def nupdates_s(self, s):
+#         return self.sdict.get(s, 0)
+
+#     def update_target(self, sa, target):
+#         v = self.value(sa)
+#         n = self.nupdates(sa)
+
+#         v += (target - v) / (n + 1)
+#         n += 1
+
+#         self.sadict[sa] = v, n
+#         self.sdict[sa.s] = self.nupdates_s(sa.s) + 1
 
 
 class Values_Linear(Values):
@@ -235,10 +271,10 @@ class ActionValues(object):
         return optim_actions[ai]
 
 
-class StateValues_Lookup(StateValues, Values_Lookup):
+class StateValues_Tabular(StateValues, Values_Tabular):
     pass
 
-class StateValues_Tabular(StateValues, Values_Tabular):
+class StateValues_TabularCounted(StateValues, Values_TabularCounted):
     pass
 
 class StateValues_Linear(StateValues, Values_Linear):
@@ -249,6 +285,9 @@ class StateValues_LinearBayesian(StateValues, Values_LinearBayesian):
 
 
 class ActionValues_Tabular(ActionValues, Values_Tabular):
+    pass
+
+class ActionValues_TabularCounted(ActionValues, Values_TabularCounted):
     pass
 
 class ActionValues_Linear(ActionValues, Values_Linear):

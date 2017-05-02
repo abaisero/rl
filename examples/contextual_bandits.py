@@ -2,7 +2,7 @@ import numpy.random as rnd
 
 from rl.problems import State, SAPair
 from rl.problems.bandits.cb import ContextualBandit, CBModel, CB
-from rl.values import Values_Tabular
+from rl.values import Values_TabularCounted
 from rl.policy import Policy_UCB, UCB_confidence_Q
 from rl.algo.bandits import BanditAgent
 
@@ -54,9 +54,10 @@ if __name__ == '__main__':
     model = DiceModel(bandits)
     cb = CB(model)
 
-    Q = Values_Tabular()
-    def Q_confidence(sa): return UCB_confidence_Q(sa, Q)
-    policy = Policy_UCB(Q.value, Q_confidence, beta=cb.maxr)
+    Q = Values_TabularCounted()
+    # def Q_confidence(sa): return UCB_confidence_Q(sa, Q)
+    # policy = Policy_UCB(Q.value, Q_confidence, beta=cb.maxr)
+    policy = Policy_UCB(Q.value, lambda sa: UCB_confidence_Q(sa, Q), beta=cb.maxr)
     # agent = BanditAgent(mab, Q, policy)
 
     for i in range(100000):
@@ -78,6 +79,5 @@ if __name__ == '__main__':
     for i in range(1, 7):
         s = DiceState(i)
         for b in bandits:
-            print '{} {}: {}'.format(s, b, Q.vn(SAPair(s, b)))
-
-    print Q.sadict.keys()
+            sa = SAPair(s, b)
+            print '{} {}: {} {}'.format(s, b, Q.value(sa), Q.nupdates_sa(sa))

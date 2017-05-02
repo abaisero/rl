@@ -3,7 +3,7 @@ from scipy.stats import multivariate_normal
 
 from rl.problems import tstate, State, Action, SAPair, Model
 from rl.problems.mdp import MDP
-from rl.values import ActionValues_Tabular, ActionValues_Linear, ActionValues_LinearBayesian
+from rl.values import ActionValues_TabularCounted, ActionValues_Linear, ActionValues_LinearBayesian
 from rl.policy import Policy_random, Policy_egreedy, Policy_UCB, UCB_confidence_Q
 from rl.algo.search import TDSearch
 
@@ -106,7 +106,7 @@ if __name__ == '__main__':
 
     # model 1: tabular AV, UCB policy
     # works with both qlearning and sarsa
-    Q = ActionValues_Tabular()
+    Q = ActionValues_TabularCounted()
     def Q_confidence(sa): return UCB_confidence_Q(sa, Q)
     policy = Policy_UCB(Q.value, Q_confidence, beta=mdp.model.maxr)
 

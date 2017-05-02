@@ -81,7 +81,7 @@ class MCTS(object):
                 s1 = self.model.sample_s1(s0, a)
                 r = self.model.sample_r(s0, a, s1)
 
-                g += gammat * r 
+                g += gammat * r
                 gammat *= self.gamma
                 if verbose_:
                     print '{}, {}, {}, {}'.format(s0, a, r, s1)
@@ -92,7 +92,7 @@ class MCTS(object):
             while anode is not None:
                 snode = anode.parent
                 g = snode.meta['r'] + self.gamma * g
-                self.Q.update(g, SAPair(snode.data, anode.data))
+                self.Q.update_target(SAPair(snode.data, anode.data), g)
                 anode = snode.parent
             if verbose_:
                 print 'Total return: {}'.format(g)

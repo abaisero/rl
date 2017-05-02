@@ -23,7 +23,7 @@ def UCB_confidence(sa, sa_nupdates, s_nupdates):
 
 
 def UCB_confidence_Q(sa, Q):
-    return UCB_confidence(sa, Q.nupdates, Q.nupdates_s)
+    return UCB_confidence(sa, Q.nupdates_sa, Q.nupdates_s)
 
 
 class Policy(object):
@@ -90,7 +90,7 @@ class Policy_UCB(Policy):
 
     def sample_a(self, actions, s=None):
         super(Policy_UCB, self).sample_a(actions, s)
-        sas = [SAPair(s=s, a=a) for a in actions]
+        sas = [SAPair(s, a) for a in actions]
         mus = np.array(map(self.m, sas))
         sigmas = np.array(map(self.s, sas))
         ucbs = mus + np.nan_to_num(self.beta * sigmas)
