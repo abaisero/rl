@@ -27,14 +27,17 @@ def UCB_confidence_Q(sa, Q):
 
 
 class Policy(object):
-    def sample_a(self, actions, s=None):
-        if s is tstate:
-            return taction
+    pass
+    # TODO I don't think I need this
+    # def sample_a(self, actions, s=None):
+    #     if s is tstate:
+    #         return taction
 
 
 class Policy_random(Policy):
     def sample_a(self, actions, s=None):
-        super(Policy_random, self).sample_a(actions, s)
+        # TODO why is this here
+        # super(Policy_random, self).sample_a(actions, s)
         i = rnd.choice(len(actions))
         return actions[i]
 
@@ -50,7 +53,8 @@ class Policy_egreedy(Policy_Qbased):
         self.e = e
 
     def sample_a(self, actions, s=None):
-        super(Policy_egreedy, self).sample_a(actions, s)
+        # TODO why is this here?
+        # super(Policy_egreedy, self).sample_a(actions, s)
         if self.e < rnd.random():
             return self.Q.optim_action(actions, s)
         ai = rnd.choice(len(actions))
@@ -78,7 +82,8 @@ class Policy_UCB(Policy):
         self.beta = beta
 
     def sample_a(self, actions, s=None):
-        super(Policy_UCB, self).sample_a(actions, s)
+        # TODO why is this here
+        # super(Policy_UCB, self).sample_a(actions, s)
         sas = [SAPair(s, a) for a in actions]
         mus = np.array(map(self.m, sas))
         sigmas = np.array(map(self.s, sas))
