@@ -13,7 +13,7 @@ import matplotlib.pyplot as plt
 from rl.problems import State, Action, SAPair, tstate, taction, Model, System
 
 # from rl.env import environment, model, ModelException
-from rl.values import StateValues_Lookup
+from rl.values import StateValues_Tabular
 from rl.algo.dp import policy_iteration, value_iteration
 # from rl.policy import Policy_egreedy
 
@@ -169,7 +169,7 @@ if __name__ == '__main__':
     coinp = .4
 
     sys = GamblerSystem(goal, coinp)
-    V = StateValues_Lookup()
+    V = StateValues_Tabular()
 
     gamma = 1
 
