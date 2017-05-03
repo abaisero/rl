@@ -1,6 +1,5 @@
 from __future__ import division
 
-from collections import defaultdict
 import math
 
 import numpy as np
@@ -14,6 +13,7 @@ from rl.learning import LearningRate_geom, LearningRate_const
 from rl.problems import taction, SAPair
 
 from pytk.util import argmax
+from pytk.more_collections import defaultdict_noinsert
 
 
 class ValuesException(Exception):
@@ -41,15 +41,22 @@ class Values(object):
 
 #  TODO change all references to this
 class Values_Tabular(Values):
-    def __init__(self, initvalue=0.):
+    def __init__(self):
         super(Values_Tabular, self).__init__()
-        self.initvalue = 0.
-        self.values = {}
+        self.values = defaultdict_noinsert(float)  # float() is equivalent to lambda: 0.
+
+    @property
+    def initvalue(self):
+        return self.values
+
+    @initvalue.setter
+    def initvalue(self, value):
+        self.values.default_factory = lambda: value
 
     def value(self, sa):
         if sa.s.terminal:
             return 0.
-        return self.values.get(sa, self.initvalue)
+        return self.values[sa]
 
     def update_value(self, sa, value):
         self.values[sa] = value
@@ -57,16 +64,16 @@ class Values_Tabular(Values):
 
 # TODO separate notion of tabular with notion of tabular with tabular with counter
 class Values_TabularCounted(Values_Tabular):
-    def __init__(self, initvalue=0., stepsize=None):
-        super(Values_TabularCounted, self).__init__(initvalue)
+    def __init__(self, stepsize=None):
+        super(Values_TabularCounted, self).__init__()
 
         if stepsize is None:
             stepsize = lambda n: 1 / (n+1)
 
         self.stepsize = stepsize
-        self.__counter_sa = defaultdict(lambda: 0, {})
-        self.__counter_s = defaultdict(lambda: 0, {})
-        self.__counter_a = defaultdict(lambda: 0, {})
+        self.__counter_sa = defaultdict_noinsert(int)  # int() is equivalent to lambda: 0
+        self.__counter_s = defaultdict_noinsert(int)
+        self.__counter_a = defaultdict_noinsert(int)
 
     def nupdates_sa(self, sa):
         return self.__counter_sa[sa]
