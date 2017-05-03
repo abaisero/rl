@@ -1,7 +1,5 @@
 from __future__ import division
 
-from rl.problems import tstate
-
 import numpy as np
 
 
@@ -13,7 +11,7 @@ class GreedyAgent(object):
 
     def run(self, s0, verbose=False):
         history = []
-        while s0 is not tstate:
+        while not s0.terminal:
             actions = self.mdp.actions(s0)
             a = self.Q.optim_action(actions, s0)
             r, s1 = self.model.sample_rs1(s0, a)

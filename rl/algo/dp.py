@@ -66,7 +66,7 @@ def value_iteration(sys, V, gamma):
     delta = 1
     while delta > 1e-8:
         delta = 0
-        for s in sys.statelist:
+        for s in sys.states():
             v = bellman.equation_optim(sys, s, V, gamma)
             delta = max(delta, abs(v - V(SAPair(s))))
-            V.update(v, SAPair(s))
+            V.update_value(SAPair(s), v)

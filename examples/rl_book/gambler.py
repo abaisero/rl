@@ -10,7 +10,7 @@ from pytk.util import argmax
 
 import matplotlib.pyplot as plt
 
-from rl.problems import State, Action, SAPair, tstate, taction, Model, System
+from rl.problems import State, Action, SAPair, taction, Model, System
 
 # from rl.env import environment, model, ModelException
 from rl.values import StateValues_Tabular
@@ -22,7 +22,7 @@ class GamblerState(State):
     discrete=True
 
     def __init__(self, cash, goal):
-        self.cash = cash
+        self.cash = np.clip(cash, 0, goal)
         self.terminal = not 0 < cash < goal
 
     def __hash__(self):
@@ -77,27 +77,14 @@ class GamblerModel(Model):
         self.coinp = coinp
 
     def pr_s1(self, s0, a, s1=None):
-        def makestate(cash):
-            return GamblerState(cash) if 0 < cash < self.goal else tstate
-
         pr_dict = defaultdict(lambda: 0, {
-            makestate(s0.cash + a.cash): self.coinp,
-            makestate(s0.cash - a.cash): 1 - self.coinp,
+            GamblerState(s0.cash + a.cash, self.goal): self.coinp,
+            GamblerState(s0.cash - a.cash, self.goal): 1 - self.coinp,
         })
-        return pr_dict if s1 is None else pr_dict.get(s1, 0)
-
-        # def makestate(cash):
-        #     return GamblerState(cash, self.goal) if 0 < cash < self.goal else tstate
-
-        # pr_dict = defaultdict(lambda: 0, {
-        #     GamblerState(s0.cash + a.cash, self.goal): self.coinp,
-        #     GamblerState(s0.cash - a.cash, self.goal): 1 - self.coinp,
-        # })
-        # return pr_dict if s1 is None else pr_dict.get(s1, 0)
+        return pr_dict if s1 is None else pr_dict[s1]
 
     def E_r(self, s0, a, s1):
-        # TODO how do I distinguish one terminal state from another?
-        return 1 if s1 is tstate else 0
+        return 1 if s1.terminal and s1.cash == self.goal else 0
 
 
 class GamblerSystem(System):
@@ -106,13 +93,12 @@ class GamblerSystem(System):
         self.goal = goal
         self.coinp = coinp
 
-        self.statelist = map(GamblerState, xrange(1, self.goal))
-        self.statelist_wterm = self.statelist + [tstate]
-        self.actionlist = map(GamblerAction, xrange(1, self.goal))
+        self.statelist = [GamblerState(cash, goal) for cash in xrange(0, self.goal + 1)]
+        self.actionlist = [GamblerAction(cash) for cash in xrange(1, self.goal)]
 
     @memoizemethod
     def actions(self, s):
-        if s is tstate:
+        if s.terminal:
             return [taction]
         maxbet = min(s.cash, self.goal - s.cash)
         return self.actionlist[:maxbet]
@@ -169,9 +155,11 @@ if __name__ == '__main__':
     coinp = .4
 
     sys = GamblerSystem(goal, coinp)
-    V = StateValues_Tabular()
+    sys.model.gamma = 1
 
-    gamma = 1
+    V = StateValues_Tabular()
+    V.model = sys.model
+
 
     # # dpmethod = policy_iteration(env, mod, policy, V, gamma)
     # dpmethod = value_iteration(env, mod, policy, V, gamma)
@@ -180,15 +168,12 @@ if __name__ == '__main__':
     # policy_iteration(sys, V, gamma)
     value_iteration(sys, V, gamma)
 
-    values = map(V, map(SAPair, sys.statelist))
+    values = [V(SAPair(s)) for s in sys.states()]
+    actions = [V.optim_action(sys.actions(s), s) for s in sys.states()]
 
-    # TODO
-    # there's a problem with terminal states..
-    # if I only have 1 tstate, then how to distinguish rewards?
-    # if I have multiple tstates,
-    # if I only have states, with terminal thing, how to?
 
     print values
+    print actions
 
     # TODO fix this
     # values = map(V.__getitem__, env.states())

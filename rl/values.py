@@ -11,7 +11,9 @@ from GPy.models import GPRegression
 from GPy.kern import Linear
 from rl.learning import LearningRate_geom, LearningRate_const
 
-from rl.problems import tstate, taction, SAPair
+from rl.problems import taction, SAPair
+
+from pytk.util import argmax
 
 
 class ValuesException(Exception):
@@ -45,7 +47,7 @@ class Values_Tabular(Values):
         self.values = {}
 
     def value(self, sa):
-        if sa.s is tstate:
+        if sa.s.terminal:
             return 0.
         return self.values.get(sa, self.initvalue)
 
@@ -97,7 +99,7 @@ class Values_Linear(Values):
         self.beta = None
 
     def value(self, sa):
-        if sa.s is tstate:
+        if sa.s.terminal:
             return 0.
         if self.beta is None:
             return 0.
@@ -138,14 +140,14 @@ class Values_LinearBayesian(Values):
         self.S = None
 
     def value(self, sa):
-        if sa.s is tstate:
+        if sa.s.terminal:
             return 0.
         if self.m is None:
             return 0.
         return np.dot(sa.phi, self.m)
 
     def confidence(self, sa):
-        if sa.s is tstate:
+        if sa.s.terminal:
             return 0.
         if self.S is None:
             return np.sqrt(self.l2 * np.dot(sa.phi, sa.phi))
@@ -172,7 +174,7 @@ class Values_LinearBayesian(Values):
 #         self.model = model
 
 #     def optim_action(self, actions, s):
-#         if s is tstate:
+#         if s.terminal:
 #             raise ValuesException('No action is available from the tstate state.')
 #         if self.model is None:
 #             raise ValuesException('This method requires self.model to be set (currently None).')
@@ -181,11 +183,21 @@ class Values_LinearBayesian(Values):
 
 class StateValues(object):
     def optim_actions(self, actions, s):
+        # def expected_next_value(a):
+        #     pr_s1 = np.array([
+        #         self.model.pr_s1(s0, a) for s1 in self.sys.states(wterm=True)
+        #     ])
+        #     value_s1 = np.array([self.value(s1) for s1 in XXX])
+        #     return np.dot(pr_s1, value_s1)
+        #     return sum(self.model.pr_s1(s0, a, s1) * (self.model.E_r(s0, a, s1) + gamma * self.value(s1)) for s1 in self.sys.states(wterm=True))
+
+        # TODO need statelist, model, gamma, blarg
+        # TODO do something about this...
+        #  * should this be part of the statevalues?
+        #  * maybe another which computes these things?
         def expected_next_value(a):
-            # pr_s1 = np.array([model.pr_s1(s0, a, s1) for s1 in XXX])
-            # value_s1 = np.array([self.value(s1) for s1 in XXX])
-            # return np.dot(pr_s1, value_s1)
-            return sum(model.pr_s1(s0, a, s1) * (model.E_r(s0, a, s1) + gamma * self.value(s1)) for s1 in BLARG)
+            return sum(pr_s1 * (self.model.E_r(s0, a, s1) + self.model.gamma * self.value(SAPair(s1)))
+                    for s1, pr_s1 in self.model.pr_s1(s0, a).iteritems())
         return argmax(expected_next_value, actions, all_=True)
 
     def optim_action(self, actions, s):
@@ -223,20 +235,20 @@ class ActionValues(object):
         self.update_target(sa, target)
 
     def optim_value(self, actions, s):
-        # if s is tstate:
+        # if s.terminal:
         #     return 0.
             # raise ValuesException('No action is available from the tstate state.')
         return max(self.value(SAPair(s, a)) for a in actions)
 
     def optim_actions(self, actions, s):
-        # if s is tstate:
+        # if s.terminal:
         #     raise ValuesException('No action is available from the tstate state.')
         max_v = self.optim_value(actions, s)
         max_actions = [a for a in actions if self.value(SAPair(s, a)) == max_v]
         return max_actions
 
     def optim_action(self, actions, s):
-        # if s is tstate:
+        # if s.terminal:
         #     raise ValuesException('No action is available from the tstate state.')
         optim_actions = self.optim_actions(actions, s)
         ai = rnd.choice(len(optim_actions))
@@ -347,7 +359,7 @@ class ActionValues_LinearBayesian(ActionValues, Values_LinearBayesian):
 #         return phi_sa.ravel()
 
 #     def value(self, s, a):
-#         if s is tstate:
+#         if s.terminal:
 #             return 0.
 #         if self.gp is None:
 #             return 0.
@@ -388,7 +400,7 @@ class ActionValues_LinearBayesian(ActionValues, Values_LinearBayesian):
 #         return phi_sa.ravel()
 
 #     def value(self, s, a):
-#         if s is tstate:
+#         if s.terminal:
 #             return 0.
 #         if self.m is None:
 #             return 0.
@@ -397,7 +409,7 @@ class ActionValues_LinearBayesian(ActionValues, Values_LinearBayesian):
 #         return np.dot(phi_sa, self.m)
 
 #     def confidence(self, s, a):
-#         if s is tstate:
+#         if s.terminal:
 #             return 0.
 #         if self.S is None:
 #             return np.inf
@@ -441,7 +453,7 @@ class ActionValues_LinearBayesian(ActionValues, Values_LinearBayesian):
 #         return phi_sa.ravel()
 
 #     def value(self, s, a):
-#         if s is tstate:
+#         if s.terminal:
 #             return 0.
 #         if self.beta is None:
 #             return 0.
@@ -491,7 +503,7 @@ class ActionValues_LinearBayesian(ActionValues, Values_LinearBayesian):
 #     # TODO some way to compute features...
 
 #     def value(self, s, a):
-#         if s is tstate:
+#         if s.terminal:
 #             return 0.
 #         if self.beta is None:
 #             return 0.
@@ -546,7 +558,7 @@ class ActionValues_LinearBayesian(ActionValues, Values_LinearBayesian):
 #         return phi_sa.ravel()
 
 #     def value(self, s, a):
-#         if s is tstate:
+#         if s.terminal:
 #             return 0.
 #         if self.m is None:
 #             return 0.
@@ -555,7 +567,7 @@ class ActionValues_LinearBayesian(ActionValues, Values_LinearBayesian):
 #         return np.dot(phi_sa, self.m)
 
 #     def confidence(self, s, a):
-#         if s is tstate:
+#         if s.terminal:
 #             return 0.
 #         if self.S is None:
 #             return np.inf
@@ -574,4 +586,4 @@ class ActionValues_LinearBayesian(ActionValues, Values_LinearBayesian):
 #         self.A += np.outer(phi_sa, phi_sa) / self.s2
 #         self.b += target * phi_sa / self.s2
 #         self.S = la.inv(self.A)
-#         self.m = np.dot(self.S, self.b)
+

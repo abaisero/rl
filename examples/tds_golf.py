@@ -1,7 +1,7 @@
 import numpy as np
 from scipy.stats import norm
 
-from rl.problems import tstate, State, Action, SAPair, Model
+from rl.problems import State, Action, SAPair, Model
 from rl.problems.mdp import MDP
 from rl.values import ActionValues_Tabular, ActionValues_Linear, ActionValues_LinearBayesian
 from rl.policy import Policy_random, Policy_egreedy, Policy_UCB
@@ -16,6 +16,7 @@ class GolfState(State):
     def __init__(self, dist, nstrokes):
         self.dist = dist
         self.nstrokes = nstrokes
+        self.terminal = dist == 0
 
         degree = 3
         self.phi = np.empty(degree + 2)
@@ -97,13 +98,13 @@ class GolfModel(Model):
 
         x = norm.rvs(m, s)
         if p * x <= s0.dist <= x:
-            return tstate
-
-        s1dist = abs(s0.dist - x)
+            s1dist = 0.
+        else:
+            s1dist = abs(s0.dist - x)
         return GolfState(s1dist, s0.nstrokes + 1)
 
     def sample_r(self, s0, a, s1):
-        return 10. if s1 == tstate else -1.
+        return 10. if s1.terminal else -1.
 
 
 class GolfMDP(MDP):

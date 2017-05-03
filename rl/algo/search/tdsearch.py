@@ -2,7 +2,7 @@ import numpy.random as rnd
 
 import pytk.itt as tkitt
 
-from rl.problems import tstate, SAPair
+from rl.problems import SAPair
 
 
 # TODO TDSearch doesn't really need a tree..
@@ -110,7 +110,7 @@ class TDSearch(object):
             verbose_ = bool(verbose)
             if verbose_:
                 print '---'
-            while s0 is not tstate:
+            while not s0.terminal:
                 s0, a0 = self.runonce(s0, a0, verbose_)
 
         # Select the root action with highest score
@@ -122,7 +122,7 @@ class TDSearch(object):
         if a0 is None:
             a0 = self.policy.sample_a(actions0, s0)
 
-        if s0 is not tstate:
+        if not s0.terminal:
             r, s1 = self.model.sample_rs1(s0, a0)
             actions1 = self.mdp.actions(s1)
             a1 = self.policy.sample_a(actions1, s1)

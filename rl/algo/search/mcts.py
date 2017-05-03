@@ -2,7 +2,7 @@ import numpy.random as rnd
 
 import pytk.itt as tkitt
 
-from rl.problems import tstate, SAPair
+from rl.problems import SAPair
 from rl.util import Tree
 from rl.policy import Policy_egreedy
 
@@ -38,7 +38,7 @@ class MCTS(object):
             while True:
                 s0 = snode.data
                 actions = self.mdp.actions(s0)
-                if s0 is tstate \
+                if s0.terminal \
                         or len(snode.children) < len(actions):
                     break
 
@@ -57,7 +57,7 @@ class MCTS(object):
                     snode = anode.add_child(s1)
 
             # EXPANSION
-            if s0 is not tstate:
+            if not s0.terminal:
                 actions = set(self.mdp.actions(s0)) - set(snode.children.itervalues())
                 ai = rnd.choice(len(actions))
                 a = tkitt.nth(ai, actions)
@@ -75,7 +75,7 @@ class MCTS(object):
 
             # SIMULATION
             g, gammat = 0., 1.
-            while s0 is not tstate:
+            while not s0.terminal:
                 actions = self.mdp.actions(s0)
                 a = self.policy_dflt.sample_a(actions, s0)
                 s1 = self.model.sample_s1(s0, a)

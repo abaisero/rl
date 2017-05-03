@@ -34,16 +34,16 @@ class bellman_statevalues(bellman):
 
 
 class bellman_statevalues(bellman):
-    def __init__(self, sys, model, gamma, V):
-        super(bellman_statevalues, self).__init__(sys, model, gamma)
+    def __init__(self, sys, model, V):
+        super(bellman_statevalues, self).__init__(sys, model)
         self.V = V
 
     def rhs(self, s0, a):
-        pr_s1 = np.array([self.model.pr_s1(s0, a, s1) for s1 in self.sys.statelist])
-        E_r = np.array([self.model.E_r(s0, a, s1) for s1 in self.sys.statelist])
-        V_s1 = np.array([self.V(s1) for s1 in self.sys.statelist])
-        return np.dot(pr_s1, E_r + self.gamma * V_s1)
-        # return sum(self.model.P(a, s0, s1) * (self.model.R(a, s0, s1) + self.gamma * self.V[s1]) for s1 in self.sys.statelist)
+        pr_s1 = np.array([self.model.pr_s1(s0, a, s1) for s1 in self.sys.states()])
+        E_r = np.array([self.model.E_r(s0, a, s1) for s1 in self.sys.states()])
+        V_s1 = np.array([self.V(s1) for s1 in self.sys.states()])
+        return np.dot(pr_s1, E_r + self.model.gamma * V_s1)
+        # return sum(self.model.P(a, s0, s1) * (self.model.R(a, s0, s1) + self.model.gamma * self.V[s1]) for s1 in self.sys.states())
 
     def update(self, s, policy):
         return sum(p * self.rhs(s, a) for a, p in policy.pr_a(s).iteritems())
@@ -56,9 +56,9 @@ class bellman_statevalues(bellman):
 
 
 # TODO this is closely related with the values functions
-def rhs(sys, s0, a, V, gamma):
-    return sum(pr_s1 * (sys.model.E_r(s0, a, s1) + gamma * V(SAPair(s1)))
-            for s1, pr_s1 in sys.model.pr_s1(s0, a).iteritems())
+def rhs(s0, a, V, model):
+    return sum(pr_s1 * (model.E_r(s0, a, s1) + model.gamma * V(SAPair(s1)))
+            for s1, pr_s1 in model.pr_s1(s0, a).iteritems())
     # expected_Vs1 = 0
     # for s1, p in sys.model.pr_s1(s0, a).iteritems():
     #     expected_Vs1 += p * (sys.model.E_r(s0, a, s1) + gamma * V(s1))
@@ -70,13 +70,14 @@ def rhs(sys, s0, a, V, gamma):
     # return np.dot(pr_s1, E_r + gamma * V_s1)
 
 
-def equation(s, model, policy):
+def equation(s, V, model, policy):
+    return sum(pr_a * rhs(s, a, V, model) for a, pr_a in policy.
     pass
     # return sum(p * rhs(s, a) for a, p in policy.pr(s).itervalues())
 
 
-def equation_optim(sys, s, V, gamma):
-    return max(rhs(sys, s, a, V, gamma) for a in sys.actions(s))
+def equation_optim(s, V, model, sys):
+    return max(rhs(s, a, V, model) for a in sys.actions(s))
 
 
 

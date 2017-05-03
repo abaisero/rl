@@ -6,7 +6,7 @@ import math
 import numpy as np
 import numpy.random as rnd
 
-from rl.problems import tstate, taction, SAPair
+from rl.problems import taction, SAPair
 
 
 def UCB_confidence(sa, sa_nupdates, s_nupdates):
@@ -28,15 +28,28 @@ def UCB_confidence_Q(sa, Q):
 
 
 class Policy(object):
-    def sample_a(self, actions, s=None):
+    def pr_a(self, actions, s=None, a=None):
         raise NotImplementedError
+
+    def sample_a(self, actions, s=None):
+        pr_a = self.pr_a(actions, s)
+        p = np.array([pr_a[a] for a in actions])
+
+        ai = rnd.choice(len(actions), p=p)
+        return actions[ai]
     # TODO I don't think I need this
     # def sample_a(self, actions, s=None):
-    #     if s is tstate:
+    #     if s.terminal:
     #         return taction
 
 
 class Policy_random(Policy):
+    def pr_a(actions, s=None, a=None):
+        pr_dict = defaultdict(lambda: 0,
+            dict(zip(actions, itt.repeat(1/len(actions))))
+        )
+        return pr_dict if a is None else pr_dict[a]
+
     def sample_a(self, actions, s=None):
         # TODO why is this here
         # super(Policy_random, self).sample_a(actions, s)
@@ -53,6 +66,13 @@ class Policy_egreedy(Policy_Qbased):
     def __init__(self, Q, e=0.):
         super(Policy_egreedy, self).__init__(Q)
         self.e = e
+
+    def pr_a(self, actions, s=None, a=None):
+        pr_dict = defaultdict(lambda: 0,
+            dict(zip(actions, itt.repeat(self.e/len(actions))))
+        )
+        pr_dict[self.Q.optim_action(actions, s)] += 1 - self.e
+        return pr_dict if a is None else pr_dict[a]
 
     def sample_a(self, actions, s=None):
         # TODO why is this here?
@@ -125,12 +145,12 @@ class Policy_softmax(Policy):
         super(Policy_softmax, self).__init__()
         self.pref = pref
 
-    def sample_a(self, actions):
+    def pr_a(self, actions, a=None):
         pr_a = np.exp(self.pref.values(actions))
         pr_a /= pr_a.sum()
 
-        ai = rnd.choice(len(actions), p=pr_a)
-        return actions[ai]
+        pr_dict = defaultdict(lambda: 0, dict(zip(actions, pr_a)))
+        return pr_dict if a is None else pr_dict[a]
 
 
 class Policy_UCB(Policy):

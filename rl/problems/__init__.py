@@ -1,11 +1,5 @@
 import numpy as np
 
-tstate = type(
-    'Terminal',
-    (object,),
-    dict(__str__=lambda self: 'S(Terminal)'),
-)()
-
 taction = type(
     'TerminalAction',
     (object,),
@@ -166,9 +160,12 @@ class System(object):
     def __init__(self, model):
         self.model = model
 
+    def states(self, wterm=False):
+        return (s for s in self.statelist if wterm or not s.terminal)
+
     def actions(self, s):
         """ if the actionset depends on the state, this should be overridden """
-        if s is tstate:
+        if s.terminal:
             return [taction]
         return self.actionlist
 
@@ -181,6 +178,6 @@ class RLProblem(object):
 
     def actions(self, s):
         """ if the actionset depends on the state, this should be overridden """
-        if s is tstate:
+        if s.terminal:
             return [taction]
         return self.actionlist

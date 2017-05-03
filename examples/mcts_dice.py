@@ -2,7 +2,7 @@ import numpy as np
 import numpy.random as rnd
 import matplotlib.pyplot as plt
 
-from rl.problems import tstate, State, Action, SAPair, Model
+from rl.problems import State, Action, SAPair, Model
 from rl.problems.mdp import MDP
 from rl.values import ActionValues_TabularCounted, ActionValues_LinearBayesian
 from rl.policy import Policy_random, Policy_UCB, UCB_confidence_Q
@@ -14,9 +14,10 @@ from pytk.util import true_every
 class DiceState(State):
     discrete = True
 
-    def __init__(self, npips, nrolls):
+    def __init__(self, npips, nrolls, terminal=False):
         self.npips = npips
         self.nrolls = nrolls
+        self.terminal = terminal
 
         degree = 2
         self.phi = np.empty(degree + 2)
@@ -63,7 +64,9 @@ class DiceModel(Model):
         return DiceState(self.roll(), 0)
 
     def sample_s1(self, s0, a):
-        return tstate if a.stand else DiceState(self.roll(), s0.nrolls + 1)
+        if a.stand:
+            return DiceState(s0.npips, s0.nrolls, True)
+        return DiceState(self.roll(), s0.nrolls + 1)
 
     def sample_r(self, s0, a, s1):
         return s0.npips if a.stand else self.reroll_r
