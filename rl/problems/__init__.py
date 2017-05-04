@@ -1,5 +1,8 @@
 import numpy as np
 
+from pytk.util import Keyable
+
+
 taction = type(
     'TerminalAction',
     (object,),
@@ -7,36 +10,24 @@ taction = type(
 )()
 
 
-class State(object):
-    def __hash__(self):
-        raise NotImplementedError
-
-    def __eq__(self, other):
-        raise NotImplementedError
-
-    def __ne__(self, other):
-        return not self == other
+class State(Keyable):
+    pass
 
 
-class Action(object):
-    def __hash__(self):
-        raise NotImplementedError
-
-    def __eq__(self, other):
-        raise NotImplementedError
-
-    def __ne__(self, other):
-        return not self == other
+class Action(Keyable):
+    pass
 
 
 class SAPairException(Exception):
     pass
 
 
-class SAPair(object):
+class SAPair(Keyable):
     def __init__(self, s=None, a=None):
         if s is None and a is None:
             raise SAPairException('Either s or a has to be given')
+        self.setkey((s, a))
+
         self.s = s
         self.a = a
 
@@ -51,15 +42,6 @@ class SAPair(object):
             raise SAPairException()
 
         return np.outer(self.a.phi, self.s.phi).ravel()
-
-    def __hash__(self):
-        return hash((self.s, self.a))
-
-    def __eq__(self, other):
-        return self.s == other.s and self.a == other.a
-
-    def __ne__(self, other):
-        return not self == other
 
     def __str__(self):
         return 'SA({}, {})'.format(self.s, self.a)

@@ -22,14 +22,11 @@ class GamblerState(State):
     discrete=True
 
     def __init__(self, cash, goal):
-        self.cash = np.clip(cash, 0, goal)
+        cash = np.clip(cash, 0, goal)
+        self.setkey((cash,))
+
+        self.cash = cash
         self.terminal = not 0 < cash < goal
-
-    def __hash__(self):
-        return hash(self.cash)
-
-    def __eq__(self, other):
-        return self.cash == other.cash
 
     def __str__(self):
         return 'S({})'.format(self.cash)
@@ -39,13 +36,9 @@ class GamblerAction(Action):
     discrete = True
 
     def __init__(self, cash):
+        self.setkey((cash,))
+
         self.cash = cash
-
-    def __hash__(self):
-        return hash(self.cash)
-
-    def __eq__(self, other):
-        return self.cash == other.cash
 
     def __str__(self):
         return 'A({})'.format(self.cash)

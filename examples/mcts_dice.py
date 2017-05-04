@@ -15,6 +15,8 @@ class DiceState(State):
     discrete = True
 
     def __init__(self, npips, nrolls, terminal=False):
+        self.setkey((npips, nrolls))
+
         self.npips = npips
         self.nrolls = nrolls
         self.terminal = terminal
@@ -24,12 +26,6 @@ class DiceState(State):
         self.phi[0] = nrolls
         self.phi[1:] = np.vander([npips], degree + 1)
 
-    def __hash__(self):
-        return hash((self.npips, self.nrolls))
-
-    def __eq__(self, other):
-        return self.npips == other.npips and self.nrolls == other.nrolls
-
     def __str__(self):
         return 'S(npips={}, nrolls={})'.format(self.npips, self.nrolls)
 
@@ -38,17 +34,13 @@ class DiceAction(Action):
     discrete = True
 
     def __init__(self, hit):
+        self.setkey((hit,))
+
         self.hit = hit
         self.stand = not hit
 
         # self.phi = np.array([self.hit, self.stand], dtype=np.float64)
         self.phi = np.array([self.hit, self.stand], dtype=np.int64)
-
-    def __hash__(self):
-        return hash(self.hit)
-
-    def __eq__(self, other):
-        return self.hit == other.hit
 
     def __str__(self):
         return 'A(\'{}\')'.format('hit' if self.hit else 'stand')

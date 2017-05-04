@@ -14,6 +14,8 @@ class GolfState(State):
     discrete = True
 
     def __init__(self, dist, nstrokes):
+        self.setkey((dist, nstrokes))
+
         self.dist = dist
         self.nstrokes = nstrokes
         self.terminal = dist == 0
@@ -23,15 +25,6 @@ class GolfState(State):
         self.phi[0] = nstrokes
         self.phi[1:] = np.vander([dist], degree + 1)
 
-    def __hash__(self):
-        return hash((self.dist, self.nstrokes))
-
-    def __eq__(self, other):
-        try:
-            return self.dist == other.dist and self.nstrokes == other.nstrokes
-        except AttributeError:
-            return False
-
     def __str__(self):
         return 'S(dist={}, nstrokes={})'.format(self.dist, self.nstrokes)
 
@@ -40,18 +33,14 @@ class GolfAction(Action):
     discrete = True
 
     def __init__(self, club, clubs):
+        self.setkey((club,))
+
         self.club = club
         self.clubs = clubs
 
         # TODO fix this
         # self.phi = (clubs == club).astype(np.float64)
         self.phi = (clubs == club).astype(np.int64)
-
-    def __hash__(self):
-        return hash(self.club)
-
-    def __eq__(self, other):
-        return self.club == other.club
 
     def __str__(self):
         return 'A(club={})'.format(self.club)

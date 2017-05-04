@@ -13,13 +13,9 @@ def roll():
 
 class DiceState(State):
     def __init__(self, npips):
+        self.setkey((npips,))
+
         self.npips = npips
-
-    def __hash__(self):
-        return hash(self.npips)
-
-    def __eq__(self, other):
-        return self.npips == other.npips
 
     def __str__(self):
         return 'S(npips={})'.format(self.npips)

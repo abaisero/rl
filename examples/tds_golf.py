@@ -14,6 +14,8 @@ class GolfState(State):
     discrete = False
 
     def __init__(self, dist, nstrokes):
+        self.setkey((dist, nstrokes))
+
         self.dist = dist
         self.nstrokes = nstrokes
         self.terminal = dist == 0
@@ -26,16 +28,6 @@ class GolfState(State):
         degree = 3
         self.phi = np.vander([dist], degree + 1).ravel()
 
-    # TODO I don't really need this when using value function approx, right?!
-    def __hash__(self):
-        return hash((self.dist, self.nstrokes))
-
-    def __eq__(self, other):
-        try:
-            return self.dist == other.dist and self.nstrokes == other.nstrokes
-        except AttributeError:
-            return False
-
     def __str__(self):
         return 'S(dist={:2.1f}, nstrokes={})'.format(self.dist, self.nstrokes)
 
@@ -44,18 +36,12 @@ class GolfAction(Action):
     discrete = True
 
     def __init__(self, club, nclub, nclubs):
+        self.setkey((club,))
+
         self.club = club
-        # self.nclub = nclub
-        # self.nclubs = nclubs
 
         # TODO fix this need better wait to define clubs
         self.phi = np.eye(nclubs)[nclub]
-
-    def __hash__(self):
-        return hash(self.club)
-
-    def __eq__(self, other):
-        return self.club == other.club
 
     def __str__(self):
         return 'A(club={})'.format(self.club)
