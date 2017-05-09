@@ -4,8 +4,8 @@ import matplotlib.pyplot as plt
 
 from rl.problems import State, Action, SAPair, Model
 from rl.problems.mdp import MDP
-from rl.values import ActionValues_TabularCounted, ActionValues_LinearBayesian
-from rl.policy import Policy_random, Policy_UCB, UCB_confidence_Q
+from rl.values import Values_TabularCounted, Values_LinearBayesian
+from rl.policy import Policy_random, Policy_UCB
 from rl.algo.search import MCTS, TDSearch
 
 from pytk.util import true_every
@@ -39,7 +39,6 @@ class DiceAction(Action):
         self.hit = hit
         self.stand = not hit
 
-        # self.phi = np.array([self.hit, self.stand], dtype=np.float64)
         self.phi = np.array([self.hit, self.stand], dtype=np.int64)
 
     def __str__(self):
@@ -56,9 +55,9 @@ class DiceModel(Model):
         return DiceState(self.roll(), 0)
 
     def sample_s1(self, s0, a):
-        if a.stand:
-            return DiceState(s0.npips, s0.nrolls, True)
-        return DiceState(self.roll(), s0.nrolls + 1)
+        return (DiceState(s0.npips, s0.nrolls, True)
+                if a.stand
+                else DiceState(self.roll(), s0.nrolls + 1))
 
     def sample_r(self, s0, a, s1):
         return s0.npips if a.stand else self.reroll_r
@@ -67,9 +66,8 @@ class DiceModel(Model):
 class DiceMDP(MDP):
     """ Dice game MDP. """
     def __init__(self, nfaces, reroll_r):
-        # model = DiceModel(lambda: rnd.choice(nfaces)+1, reroll_r)
-        # super(DiceMDP, self).__init__(model)
-        super(DiceMDP, self).__init__(DiceModel(lambda: rnd.choice(nfaces)+1, reroll_r))
+        model = DiceModel(lambda: rnd.choice(nfaces)+1, reroll_r)
+        super(DiceMDP, self).__init__(model)
 
         self.nfaces = nfaces
         self.maxr = max(abs(reroll_r), abs(nfaces))
@@ -84,7 +82,6 @@ def run(mdp, sm):
     actions = []
     for s0 in mdp.statelist_start:
         print 'state: {}'.format(s0)
-        # a, values = sm.run(s0, 50000)
         a, values = sm.run(s0, 10000, 100, verbose=True)
         for a_ in mdp.actions(s0):
             root_values[s0, a_] = values[a_]
@@ -123,38 +120,31 @@ if __name__ == '__main__':
     print '===='
 
     # NOTE tabular AV
-    Q = ActionValues_TabularCounted()
-    def confidence(sa): return UCB_confidence_Q(sa, Q)
-    policy_tree = Policy_UCB(Q.value, confidence, beta=mdp.maxr)
+    # Q = Values_TabularCounted.Q()
+    # policy_tree = Policy_UCB.Q(Q.value_sa, Q.confidence_sa, beta=mdp.maxr)
 
     # NOTE linear bayesian AV
-    # Q = ActionValues_LinearBayesian(l=100., s2=1.)
-    # Q = ActionValues_LinearBayesian(l2=100., s2=.1)
-    # policy_tree = Policy_UCB(Q.value, Q.confidence, beta=mdp.maxr)
+    Q = Values_LinearBayesian.Q(l2=100., s2=.1)
+    policy_tree = Policy_UCB.Q(Q.value, Q.confidence, beta=mdp.maxr)
 
-    policy_dflt = Policy_random()
+    policy_dflt = Policy_random.Q()
     mcts = MCTS(mdp, mdp.model, policy_tree, policy_dflt, Q=Q)
 
     for i in range(100):
         s0 = mdp.model.sample_s0()
         mcts.run(s0, 1000, verbose=true_every(100))
 
-    # for s0 in mdp.statelist_start:
-    # for s0 in mdp.statelist_start[::-1]:
-    #     mcts.run(s0, 100000, 1000, verbose=True)
-
     print
     print 'cache'
     for s in mdp.statelist_start:
         for a in mdp.actions(s):
-            sa = SAPair(s, a)
-            print '{}, {}: {:.2f}, {:.2f}'.format(s, a, Q(sa), confidence(sa))
+            print '{}, {}: {:.2f}, {:.2f}'.format(s, a, Q(s, a), Q.confidence(s, a))
 
     print
-    print 'optimal_actions'
+    print 'optimal actions'
     for s in mdp.statelist_start:
         actions = mdp.actions(s)
-        print '{}: {}'.format(s, Q.optim_action(actions, s))
+        print '{}: {}'.format(s, Q.optim_action(s, actions))
 
     print
     print 'optimal actions'
@@ -162,15 +152,14 @@ if __name__ == '__main__':
         for nrolls in xrange(5):
             s_ = DiceState(s.npips, nrolls)
             actions = mdp.actions(s_)
-            a = Q.optim_action(actions, s_)
-            sa = SAPair(s_, a)
-            print '{} ; {} ; {:.2f} ; {:.2f}'.format(s_, a, Q(sa), confidence(sa))
+            a = Q.optim_action(s_, actions)
+            print '{} ; {} ; {:.2f} ; {:.2f}'.format(s_, a, Q(s, a), Q.confidence(s, a))
 
 
-    try:
-        print 'Q.m:\n{}'.format(Q.m)
-    except AttributeError:
-        pass
+    # try:
+    #     print 'Q.m:\n{}'.format(Q.m)
+    # except AttributeError:
+    #     pass
 
     # ax1 = plt.subplot(121)
     # run(mdp, mcts)

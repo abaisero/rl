@@ -3,7 +3,7 @@ from scipy.stats import norm
 
 from rl.problems import State, Action, SAPair, Model
 from rl.problems.mdp import MDP
-from rl.values import ActionValues_Tabular, ActionValues_Linear, ActionValues_LinearBayesian
+from rl.values import Values_Tabular, Values_Linear, Values_LinearBayesian
 from rl.policy import Policy_random, Policy_egreedy, Policy_UCB
 from rl.algo.search import TDSearch
 
@@ -20,10 +20,11 @@ class GolfState(State):
         self.nstrokes = nstrokes
         self.terminal = dist == 0
 
-        degree = 3
-        self.phi = np.empty(degree + 2)
-        self.phi[0] = nstrokes
-        self.phi[1:] = np.vander([dist], degree + 1)
+        # NOTE state value does not depend on nstrokes
+        # degree = 3
+        # self.phi = np.empty(degree + 2)
+        # self.phi[0] = nstrokes
+        # self.phi[1:] = np.vander([dist], degree + 1)
 
         degree = 3
         self.phi = np.vander([dist], degree + 1).ravel()
@@ -59,27 +60,6 @@ class GolfModel(Model):
         return GolfState(s0dist, 0)
 
     def sample_s1(self, s0, a):
-        # TODO choose action representation
-
-        # if s0.nstrokes == 100:
-        #     return self.env.terminal
-
-        # cl, st = a
-
-        # if cl == 'wood':
-        #     m, s, p = 100, 5, 1
-        # elif cl == 'iron':
-        #     m, s, p = 10, .5, 2
-        # elif cl == 'putter':
-        #     m, s, p = 1, .05, 10
-
-        # x = st * multivariate_normal.rvs(m, s ** 2)
-        # if s0.dist <= x < p * s0.dist:
-        #     return self.env.terminal
-
-        # s1dist = abs(s0.dist - x)
-        # return GolfState(s1dist, s0.nstrokes + 1)
-
         n, m, s, p = a.club
 
         x = norm.rvs(m, s)
@@ -111,12 +91,6 @@ if __name__ == '__main__':
     import numpy.random as rnd
     rnd.seed(0)
 
-    # env = GolfEnv()
-    # # Q = ActionValues_Linear(env, l=.1, a=.1)
-    # Q = ActionValues_LinearBayesian(env, l=100., s2=10.)
-    # policy = Policy_UCB(env.actions, Q.value, Q.confidence, beta=10.)
-    # # policy = Policy_egreedy(env.actions, Q, .5)
-
     # s0dist_m, s0dist_s = 20, 5
     s0dist_m, s0dist_s = 50, 0
     clubs = [
@@ -128,49 +102,45 @@ if __name__ == '__main__':
     mdp = GolfMDP(s0dist_m, s0dist_s, clubs)
 
     # NOTE linear AV, egreedy policy
-    # TODO this one is not working
-    # Q = ActionValues_Linear(.1)  # TODO I think right now the alpha is not used
-    # policy = Policy_egreedy(Q, .1)
+    # TODO doesn't work
+    # Q = Values_Linear.Q(.1)
+    # policy = Policy_egreedy.Q(Q, .1)
 
     # NOTE bayesian linear AV, UCB policy
-    Q = ActionValues_LinearBayesian(l2=100, s2=1)
-    policy = Policy_UCB(Q.value, Q.confidence, beta=mdp.model.maxr)
+    Q = Values_LinearBayesian.Q(l2=100, s2=1)
+    policy = Policy_UCB.Q(Q.value, Q.confidence, beta=mdp.model.maxr)
 
-    Q.update_method = 'sarsa'
-    # Q.update_method = 'qlearning'
+    # Q.update_method = 'sarsa'
+    Q.update_method = 'qlearning'
 
     tds = TDSearch(mdp, mdp.model, policy, Q)
 
-    from rl.algo.greedy import GreedyAgent
-    ga = GreedyAgent(mdp, mdp.model, Q)
-
-    # v = true_every(100)
-    for i in xrange(10000):
+    for i in range(1000):
         s0 = mdp.model.sample_s0()
-        tds.run(s0, 1)
+        tds.run(s0, 100, verbose=true_every(99))
 
 
-        if i % 100 == 0:
-            s0 = mdp.model.sample_s0()
-            m, v = ga.evaluate(s0, 1000)
+    #     if i % 100 == 0:
+    #         s0 = mdp.model.sample_s0()
+    #         m, v = ga.evaluate(s0, 1000)
 
-            print '---'
-            print 'Empirical: {:>6.2f}; {:>6.2f}'.format(m, v)
+    #         print '---'
+    #         print 'Empirical: {:>6.2f}; {:>6.2f}'.format(m, v)
 
-        #     actions = mdp.actions(s0)
-        #     a = Q.optim_action(actions, s0)
-        #     sa = SAPair(s0, a)
-        #     Qm = Q.value(sa)
-        #     Qv = Q.confidence(sa)
+    #     #     actions = mdp.actions(s0)
+    #     #     a = Q.optim_action(actions, s0)
+    #     #     sa = SAPair(s0, a)
+    #     #     Qm = Q.value(sa)
+    #     #     Qv = Q.confidence(sa)
 
-        #     print 'Model    : {:>6.2f}; {:>6.2f}'.format(Qm, Qv)
+    #     #     print 'Model    : {:>6.2f}; {:>6.2f}'.format(Qm, Qv)
 
 
-    # TODO code to evaluate current solution:
-    #  * print V(s0)
-    #  * simulate env many times with greedy policy, MC-evaluate V(s0)
-    # * compare the two.
+    # # TODO code to evaluate current solution:
+    # #  * print V(s0)
+    # #  * simulate env many times with greedy policy, MC-evaluate V(s0)
+    # # * compare the two.
 
-    # Also print out a few simulations to see if something weird happens
+    # # Also print out a few simulations to see if something weird happens
 
-    # TODO update UCB somehow because fapprox does not have update counts
+    # # TODO update UCB somehow because fapprox does not have update counts

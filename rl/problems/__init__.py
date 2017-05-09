@@ -103,6 +103,8 @@ class Model(object):
 
     Represents real and learned problem dynamics.
     """
+    def __init__(self, gamma=1.):
+        self.gamma = gamma
 
     def pr_s0(self, s0=None):
         raise NotImplementedError
@@ -111,7 +113,25 @@ class Model(object):
         raise NotImplementedError
 
     def E_r(self, s0, a, s1):
-        pass
+        raise NotImplementedError
+
+    # # TODO I could also specify any of these
+    # def E_r(self, s0, a):
+    #     pass
+
+    # def E_r(self, s0):
+    #     pass
+
+    # # TODO I could technically only specify any one of these
+    # def R_sas(self, s, a, s):
+    #     pass
+
+    # def R_sa(self, s, a):
+    #     return sum(p * R_sas(s, a, s1) for s1, p in self.pr_s1(s, a).iteritems())
+
+    # def R_s(self, s):
+    #     return sum(p * self.R_sa(s, a) for a, p in policy.dist(s).iteritems())
+
 
     # def pr_rs1(self, s0, a, s1=None):
     #     if s1 is not None:
