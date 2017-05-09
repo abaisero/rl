@@ -6,32 +6,10 @@ from scipy.stats import norm
 from rl.problems import SAPair
 from rl.problems.bandits import Bandit
 from rl.problems.bandits.mab import GaussianBandit, MAB
-# from rl.values import ActionValues_TabularCounted
-from rl.policy import Policy_softmax, Preference_P
+from rl.values import Values_Preference
+from rl.policy import Policy_softmax
 
 import matplotlib.pyplot as plt
-
-
-# class GaussianBandit_Nonstationary(Bandit):
-#     def __init__(self, m, s):
-#         super(GaussianBandit_Nonstationary, self).__init__()
-#         self.m = m
-#         self.s = s
-
-#     @property
-#     def maxr(self):
-#         return max(abs(self.m + 3 * self.s), abs(self.m - 3 * self.s))
-
-#     @property
-#     def Er(self):
-#         return self.m
-
-#     def sample_r(self):
-#         return norm.rvs(self.m, self.s)
-
-#     def randomwalk(self):
-#         """ Bandit nonstationarity """
-#         self.m += norm.rvs(0, .02)
 
 
 class Agent(object):
@@ -40,46 +18,28 @@ class Agent(object):
         self.policy_maker = policy_maker
         self.reset()
 
-    # def __init__(self, name, stepsize, policy_cls, *policy_args, **policy_kwargs):
-    #     self.name = name
-    #     self.stepsize = stepsize
-    #     self.policy_cls = policy_cls
-    #     self.policy_args = policy_args
-    #     self.policy_kwargs = policy_kwargs
-    #     self.reset()
-
     def reset(self):
         self.policy, self.update_target = self.policy_maker()
-        # pref = Preference_P(
-        # self.policy = self.policy_cls(
-        #     ActionValues_TabularCounted(stepsize=self.stepsize),
-        #     *self.policy_args,
-        #     **self.policy_kwargs
-        # )
 
     def feedback(self, a, r):
         self.update_target(a, r)
-        # self.policy.Q.update_target(SAPair(a=a), r)
 
     def __str__(self):
         return self.name
 
 
 def play_once(mab, agent, nrounds):
-    rewardlist = [None] * nrounds
-    optimlist = [None] * nrounds
-    for i in xrange(nrounds):
+    rewardlist = np.empty(nrounds)
+    optimlist = np.empty(nrounds)
+    for ri in xrange(nrounds):
         actions = mab.actionlist
 
         b = agent.policy.sample_a(actions)
         r = b.sample_r()
         agent.feedback(b, r)
 
-        rewardlist[i] = r
-        optimlist[i] = b in mab.optimb
-
-        # for b in mab.model.bandits:
-        #     b.randomwalk()
+        rewardlist[ri] = r
+        optimlist[ri] = b in mab.optimb
 
     return rewardlist, optimlist
 
@@ -105,16 +65,14 @@ if __name__ == '__main__':
 
     nbandits = 10
     def mab_maker():
-        # bandits = [GaussianBandit_Nonstationary(norm.rvs(), 1) for i in xrange(nbandits)]
-        # return MAB(bandits)
         bandits = [GaussianBandit(norm.rvs(), 1) for i in xrange(nbandits)]
         return MAB(bandits)
 
     def policy_maker_softmax(alpha, beta, ref):
         def policy_maker():
-            pref = Preference_P(alpha, beta, ref)
-            policy = Policy_softmax(pref)
-            return policy, pref.update_target
+            A = Values_Preference.A(alpha, beta, ref)
+            policy = Policy_softmax.A(A)
+            return policy, A.update_target
         return policy_maker
 
     # TODO implement adjustment to avoid same policy to be chosen too much
@@ -137,9 +95,9 @@ if __name__ == '__main__':
     ax = plt.subplot(211)
     for agent, reward in zip(agents, rewards):
         plt.plot(reward, label=agent.name)
-    plt.ylim([0, 2])
+    # plt.ylim([0, 2])
     box = ax.get_position()
-    ax.set_position([box.x0, box.y0, box.width * 0.6, box.height])
+    ax.set_position([box.x0, box.y0, box.width * .6, box.height])
     plt.legend(loc='center left', bbox_to_anchor=(1, .5), fancybox=True, shadow=True)
 
     ax = plt.subplot(212)
@@ -147,7 +105,7 @@ if __name__ == '__main__':
         plt.plot(optim, label=agent.name)
     plt.ylim([0, 1])
     box = ax.get_position()
-    ax.set_position([box.x0, box.y0, box.width * 0.6, box.height])
+    ax.set_position([box.x0, box.y0, box.width * .6, box.height])
     plt.legend(loc='center left', bbox_to_anchor=(1, .5), fancybox=True, shadow=True)
 
     plt.savefig('ex2.11.png')

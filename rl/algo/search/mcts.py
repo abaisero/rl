@@ -16,7 +16,7 @@ class MCTS(object):
         self.model = model
         self.policy_tree = policy_tree
         self.policy_dflt = policy_dflt
-        self.policy_greedy = Policy_egreedy(Q)
+        self.policy_greedy = Policy_egreedy.Q(Q)
 
         self.tree = Tree()
         self.Q = Q
@@ -24,7 +24,7 @@ class MCTS(object):
 
     # def run(self, sroot, budget, every, verbose=False):
     def run(self, sroot, budget, verbose=False):
-        root_values = {a: [self.Q(SAPair(sroot, a))] for a in self.mdp.actions(sroot)}
+        root_values = {a: [self.Q(sroot, a)] for a in self.mdp.actions(sroot)}
 
         self.tree.reroot(sroot)
         for i in xrange(budget):
@@ -42,7 +42,7 @@ class MCTS(object):
                         or len(snode.children) < len(actions):
                     break
 
-                a = self.policy_tree.sample_a(actions, s0)
+                a = self.policy_tree.sample(s0, actions)
                 s1 = self.model.sample_s1(s0, a)
                 r = self.model.sample_r(s0, a, s1)
 
@@ -77,7 +77,7 @@ class MCTS(object):
             g, gammat = 0., 1.
             while not s0.terminal:
                 actions = self.mdp.actions(s0)
-                a = self.policy_dflt.sample_a(actions, s0)
+                a = self.policy_dflt.sample(s0, actions)
                 s1 = self.model.sample_s1(s0, a)
                 r = self.model.sample_r(s0, a, s1)
 
@@ -92,14 +92,14 @@ class MCTS(object):
             while anode is not None:
                 snode = anode.parent
                 g = snode.meta['r'] + self.gamma * g
-                self.Q.update_target(SAPair(snode.data, anode.data), g)
+                self.Q.update_target(snode.data, anode.data, g)
                 anode = snode.parent
             if verbose_:
                 print 'Total return: {}'.format(g)
 
             for a in self.mdp.actions(sroot):
-                root_values[a].append(self.Q(SAPair(sroot, a)))
+                root_values[a].append(self.Q(sroot, a))
 
         # Select the root action with highest score
         actions = self.mdp.actions(sroot)
-        return self.policy_greedy.sample_a(actions, sroot), root_values
+        return self.policy_greedy.sample(sroot, actions), root_values

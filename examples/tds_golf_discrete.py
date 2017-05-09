@@ -3,8 +3,8 @@ from scipy.stats import multivariate_normal
 
 from rl.problems import State, Action, SAPair, Model
 from rl.problems.mdp import MDP
-from rl.values import ActionValues_TabularCounted, ActionValues_Linear, ActionValues_LinearBayesian
-from rl.policy import Policy_random, Policy_egreedy, Policy_UCB, UCB_confidence_Q
+from rl.values import Values_TabularCounted, Values_Linear, Values_LinearBayesian
+from rl.policy import Policy_random, Policy_egreedy, Policy_UCB
 from rl.algo.search import TDSearch
 
 from pytk.util import true_every
@@ -94,31 +94,28 @@ if __name__ == '__main__':
 
     # model 1: tabular AV, UCB policy
     # works with both qlearning and sarsa
-    Q = ActionValues_TabularCounted()
-    def Q_confidence(sa): return UCB_confidence_Q(sa, Q)
-    policy = Policy_UCB(Q.value, Q_confidence, beta=mdp.model.maxr)
+    # Q = Values_TabularCounted.Q()
+    # policy = Policy_UCB.Q(Q.value, Q.confidence, beta=mdp.model.maxr)
 
     # model 2: linear AV, egreedy policy
-    # doesn't work.  Best guess:  exploration does not cancel out bad updates
-    # Q = ActionValues_Linear(.1)  # TODO I think right now the alpha is not used
-    # policy = Policy_egreedy(Q, .1)
+    # TODO doesn't work.  Best guess:  exploration does not cancel out bad updates
+    # Q = Values_Linear.Q(.01)
+    # policy = Policy_egreedy.Q(Q, .1)
 
     # model 3: bayesian linear AV, UCB policy
     # works with both qlearning and sarsa (takes longer)
-    # Q = ActionValues_LinearBayesian(l2=100, s2=1)
-    # policy = Policy_UCB(Q.value, Q.confidence, beta=mdp.model.maxr)
+    Q = Values_LinearBayesian.Q(l2=100, s2=1)
+    policy = Policy_UCB.Q(Q.value, Q.confidence, beta=mdp.model.maxr)
 
     # NOTE choose update method
-    Q.update_method = 'sarsa'
-    # Q.update_method = 'qlearning'
-
-    # TODO how to parametrize update function?  How to select here whether to use qlearning, or sarsa?
+    # Q.update_method = 'sarsa'  # sarsa is slower
+    Q.update_method = 'qlearning'  # qlearning is faster (but no convergence guarantee?)
 
     tds = TDSearch(mdp, mdp.model, policy, Q)
 
-    for i in range(100):
+    for i in range(1000):
         s0 = mdp.model.sample_s0()
-        tds.run(s0, 1000, verbose=true_every(100))
+        tds.run(s0, 100, verbose=true_every(99))
 
     # TODO code to evaluate current solution:
     #  * print V(s0)

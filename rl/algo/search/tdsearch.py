@@ -91,12 +91,11 @@ from rl.problems import SAPair
 
 
 class TDSearch(object):
-    def __init__(self, mdp, model, policy, Q, gamma=1.):
+    def __init__(self, mdp, model, policy, Q):
         self.mdp = mdp
         self.model = model
         self.policy = policy
         self.Q = Q
-        self.gamma = gamma
 
     def run(self, sroot, budget, verbose=False):
         # TODO TDSearch doesn't really need a tree..
@@ -105,7 +104,7 @@ class TDSearch(object):
         for i in xrange(budget):
             s0 = sroot
             actions0 = self.mdp.actions(s0)
-            a0 = self.policy.sample_a(actions0, s0)
+            a0 = self.policy.sample(s0, actions0)
 
             verbose_ = bool(verbose)
             if verbose_:
@@ -115,21 +114,22 @@ class TDSearch(object):
 
         # Select the root action with highest score
         actions = self.mdp.actions(sroot)
-        return self.Q.optim_action(actions, sroot)
+        return self.Q.optim_action(sroot, actions)
         # return self.Q.optim_action(sroot), root_values
 
     def runonce(self, s0, a0=None, verbose=False):
         if a0 is None:
-            a0 = self.policy.sample_a(actions0, s0)
+            # TODO fix this
+            a0 = self.policy.sample(s0, actions0)
 
         if not s0.terminal:
             r, s1 = self.model.sample_rs1(s0, a0)
             actions1 = self.mdp.actions(s1)
-            a1 = self.policy.sample_a(actions1, s1)
+            a1 = self.policy.sample(s1, actions1)
 
             if verbose:
                 print '{}, {}, {}, {}, {}'.format(s0, a0, r, s1, a1)
 
-            self.Q.update(r=r, gamma=self.gamma, s0=s0, a0=a0, s1=s1, a1=a1, actions=self.mdp.actions(s1))
+            self.Q.update(s0=s0, a0=a0, r=r, s1=s1, a1=a1, actions=actions1, gamma=self.model.gamma)
 
         return s1, a1
