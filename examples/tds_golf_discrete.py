@@ -113,7 +113,7 @@ if __name__ == '__main__':
 
     tds = TDSearch(mdp, mdp.model, policy, Q)
 
-    for i in range(1000):
+    for i in xrange(1000):
         s0 = mdp.model.sample_s0()
         tds.run(s0, 100, verbose=true_every(99))
 
