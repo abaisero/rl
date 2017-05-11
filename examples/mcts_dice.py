@@ -6,7 +6,7 @@ from rl.problems import State, Action, SAPair, Model
 from rl.problems.mdp import MDP
 from rl.values import Values_TabularCounted, Values_LinearBayesian
 from rl.policy import Policy_random, Policy_UCB
-from rl.algo.search import MCTS, TDSearch
+from rl.algo.mc import MCTS
 
 from pytk.util import true_every
 

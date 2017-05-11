@@ -1,5 +1,6 @@
 from __future__ import division
 
+from contextlib import contextmanager
 import math
 
 import numpy as np
@@ -24,10 +25,63 @@ Qtype = object()
 Vtype = object()
 Atype = object()
 
+
+class Eligibility(object):
+    def __init__(self, vtype, gamma, lambda_):
+        self.vtype = vtype
+        self.gl = gamma * lambda_
+        self.reset()
+
+    def reset(self):
+        raise NotImplementedError
+
+    def trace_sa(self, s, a):
+        raise NotImplementedError
+
+    def trace_s(self, s):
+        return self.trace_sa(s, None)
+
+    def trace(self, *args, **kwargs):
+        if self.vtype is Qtype:
+            return self.trace_sa(*args, **kwargs)
+        elif self.vtype is Vtype:
+            return self.trace_s(*args, **kwargs)
+        else:
+            raise ValuesException('ValueType ({}) ineligible.'.format(self.vtype))
+
+    def update_sa(self, s, a):
+        raise NotImplementedError
+
+    def update_s(self, s):
+        return self.update_sa(s, None)
+
+    def update(self, *args, **kwargs):
+        if self.vtype is Qtype:
+            return self.update_sa(*args, **kwargs)
+        elif self.vtype is Vtype:
+            return self.update_s(*args, **kwargs)
+        else:
+            raise ValuesException('ValueType ({}) ineligible.'.format(self.vtype))
+
+    def __call__(self, *args, **kwargs):
+        return self.trace(*args, **kwargs)
+
+
 class Values(object):
 
     def __init__(self, vtype):
         self.vtype = vtype
+
+    @contextmanager
+    def eligibility(self, gamma, lambda_):
+        if hasattr(self, 'elig'):
+            raise ValuesException('Eligibility already exists')
+        self.elig = self.make_elig(gamma, lambda_)
+        yield self.elig
+        del self.elig
+
+    def make_elig(self, gamma, lambda_):
+        raise NotImplementedError
 
     @classmethod
     def Q(cls, *args, **kwargs):
@@ -119,30 +173,6 @@ class Values(object):
         else:
             raise ValuesException('ValueType ({}) unknown.'.format(self.vtype))
 
-    def update_sarsa(self, s0, a0, r, s1, a1, gamma):
-        target = r + gamma * self.value_sa(s1, a1)
-        self.update_target(s0, a0, target)
-
-    def update_qlearning(self, s0, a0, r, s1, actions, gamma):
-        target = r + gamma * self.optim_value_sa(s1, actions)
-        self.update_target(s0, a0, target)
-
-    def update(self, **kwargs):
-        if self.update_method == 'sarsa':
-            args = 's0', 'a0', 'r', 's1', 'a1', 'gamma'
-            update = self.update_sarsa
-        elif self.update_method == 'qlearning':
-            args = 's0', 'a0', 'r', 's1', 'actions', 'gamma'
-            update = self.update_qlearning
-        else:
-            raise ValuesException('Update target type {} not defined.'.format(method))
-
-        args_missing = [arg for arg in args if arg not in kwargs]
-        if args_missing:
-            raise ValuesException('Update target type {} requires {}'.format(method, args_missing))
-
-        update(**{k: kwargs[k] for k in args})
-
     def optim_value_sa(self, s, actions):
         return max(self.value_sa(s, a) for a in actions)
 
@@ -218,7 +248,7 @@ class Values(object):
 class Values_Tabular(Values):
     def __init__(self, vtype):
         super(Values_Tabular, self).__init__(vtype)
-        self.values = defaultdict_noinsert(float)  # float () is equivalent to lambda: 0.
+        self.values = defaultdict_noinsert(float)  # float() is equivalent to lambda: 0.
 
     @property
     def initvalue(self):
@@ -236,6 +266,19 @@ class Values_Tabular(Values):
 
 
 class Values_TabularCounted(Values_Tabular):
+    class Eligibility_TabularCounted(Eligibility):
+        def reset(self):
+            self.traces = defaultdict_noinsert(float)  # float() is equivalent to lambda: 0
+
+        def trace_sa(self, s, a):
+            return self.traces[s, a]
+
+        def update_sa(self, s, a):
+            for sa in self.traces.viewkeys():
+                self.traces[sa] *= self.gl
+            self.traces[s, a] += 1
+
+
     def __init__(self, vtype, alpha=None):
         super(Values_TabularCounted, self).__init__(vtype)
 
@@ -244,6 +287,9 @@ class Values_TabularCounted(Values_Tabular):
 
         self.alpha = alpha
         self.counter = defaultdict_noinsert(int)  # int() is equivalent to lambda: 0
+
+    def make_elig(self, gamma, lambda_):
+        return type(self).Eligibility_TabularCounted(self.vtype, gamma, lambda_)
 
     def value_sa(self, s, a):
         value = super(Values_TabularCounted, self).value_sa(s, a)
@@ -277,7 +323,14 @@ class Values_TabularCounted(Values_Tabular):
         v = self.value_sa(s, a)
         n = self.nupdates_sa(s, a)
 
-        value = v + self.alpha(n) * (target - v)
+        try:
+            e = self.elig.trace_sa(s, a)
+        except AttributeError:
+            dv = self.alpha(n) * (target - v)
+        else:
+            dv = self.alpha(n) * (target - v) * e
+
+        value = v + dv
         self.update_value_sa(s, a, value)
 
     def nupdates_sa(self, s, a):
@@ -294,6 +347,24 @@ class Values_TabularCounted(Values_Tabular):
 
 
 class Values_Linear(Values):
+    class Eligibility_Linear(Eligibility):
+        def reset(self):
+            self.traces = None
+
+        def trace_sa(self, s, a):
+            if self.traces is None:
+                self.traces = np.zeros(len(sa.phi))
+            return self.traces
+
+        def update_sa(self, s, a):
+            sa = SAPair(s, a)
+            if self.traces is None:
+                self.traces = np.zeros(len(sa.phi))
+            else:
+                self.traces *= self.gl
+            self.traces += sa.phi
+
+
     def __init__(self, vtype, alpha=1.):
         super(Values_Linear, self).__init__(vtype)
         self.alpha = alpha

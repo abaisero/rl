@@ -5,7 +5,7 @@ from rl.problems import State, Action, SAPair, Model
 from rl.problems.mdp import MDP
 from rl.values import Values_TabularCounted, Values_Linear, Values_LinearBayesian
 from rl.policy import Policy_random, Policy_egreedy, Policy_UCB
-from rl.algo.search import TDSearch
+from rl.algo.td import SARSA, SARSA_l, Qlearning, Qlearning_l
 
 from pytk.util import true_every
 
@@ -94,8 +94,8 @@ if __name__ == '__main__':
 
     # model 1: tabular AV, UCB policy
     # works with both qlearning and sarsa
-    # Q = Values_TabularCounted.Q()
-    # policy = Policy_UCB.Q(Q.value, Q.confidence, beta=mdp.model.maxr)
+    Q = Values_TabularCounted.Q()
+    policy = Policy_UCB.Q(Q.value, Q.confidence, beta=mdp.model.maxr)
 
     # model 2: linear AV, egreedy policy
     # TODO doesn't work.  Best guess:  exploration does not cancel out bad updates
@@ -104,18 +104,24 @@ if __name__ == '__main__':
 
     # model 3: bayesian linear AV, UCB policy
     # works with both qlearning and sarsa (takes longer)
-    Q = Values_LinearBayesian.Q(l2=100, s2=1)
-    policy = Policy_UCB.Q(Q.value, Q.confidence, beta=mdp.model.maxr)
+    # Q = Values_LinearBayesian.Q(l2=100, s2=1)
+    # policy = Policy_UCB.Q(Q.value, Q.confidence, beta=mdp.model.maxr)
 
-    # NOTE choose update method
-    # Q.update_method = 'sarsa'  # sarsa is slower
-    Q.update_method = 'qlearning'  # qlearning is faster (but no convergence guarantee?)
+    # NOTE algorithm
+    # algo = SARSA(mdp, mdp.model, policy, Q)  # Equivalent to SARSA_l(0.)
+    algo = SARSA_l(mdp, mdp.model, policy, Q, .5)
+    # algo = Qlearning(mdp, mdp.model, policy, Q)
 
-    tds = TDSearch(mdp, mdp.model, policy, Q)
+    # TODO not implemented yet
+    # algo = MC(mdp, mdp.model, policy, Q)  # Equivalent to SARSA_l(1.)
+    # algo = Qlearning_l(mdp, mdp.model, policy, Q, .5)
 
-    for i in xrange(1000):
+    nepisodes = 2000
+
+    verbose = true_every(100)
+    for i in xrange(nepisodes):
         s0 = mdp.model.sample_s0()
-        tds.run(s0, 100, verbose=true_every(99))
+        algo.run(s0, verbose=verbose.true)
 
     # TODO code to evaluate current solution:
     #  * print V(s0)
