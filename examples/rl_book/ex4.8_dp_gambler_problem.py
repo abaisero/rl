@@ -17,6 +17,7 @@ class GamblerState(State):
     discrete = True
 
     def __init__(self, cash, goal):
+        super(GamblerState, self).__init__()
         cash = np.clip(cash, 0, goal)
         self.setkey((cash,))
 
@@ -31,6 +32,7 @@ class GamblerAction(Action):
     discrete = True
 
     def __init__(self, cash):
+        super(GamblerAction, self).__init__()
         self.setkey((cash,))
         self.cash = cash
 
@@ -40,14 +42,14 @@ class GamblerAction(Action):
 
 class GamblerModel(Model):
     def __init__(self, goal, coinp):
+        super(GamblerModel, self).__init__()
         self.goal = goal
         self.coinp = coinp
 
     def pr_s1(self, s0, a, s1=None):
-        pr_dict = defaultdict(int, {
-            GamblerState(s0.cash + a.cash, self.goal): self.coinp,
-            GamblerState(s0.cash - a.cash, self.goal): 1 - self.coinp,
-        })
+        pr_dict = defaultdict(int)
+        pr_dict[GamblerState(s0.cash + a.cash, self.goal)] = self.coinp
+        pr_dict[GamblerState(s0.cash - a.cash, self.goal)] = 1 - self.coinp
         return pr_dict if s1 is None else pr_dict[s1]
 
     def E_r(self, s0, a, s1):
