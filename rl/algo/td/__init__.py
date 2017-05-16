@@ -5,13 +5,7 @@ class Algo(object):
         self.policy = policy
         self.Q = Q
 
-    def run(self, s, nsteps):
-        raise NotImplementedError
-
-    def step(self, *args, **kwargs):
-        raise NotImplementedError
-
-    def learn(self, *args, **kwargs):
+    def run(self, s, verbose=False):
         raise NotImplementedError
 
 

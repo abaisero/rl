@@ -179,7 +179,8 @@ class Values(object):
     def optim_value_s(self, s, actions, model):
         def value(s0, a):
             model_dist = model.pr_s1(s0, a)
-            return sum(pr_s1 * (model.E_r(s0, a, s1) + model.gamma * self.value(s1)) for s1, pr_s1 in model_dist.iteritems())
+            return sum(pr_s1 * (model.E_r(s0, a, s1) + model.gamma * self.value(s1))
+                    for s1, pr_s1 in model_dist.iteritems())
         return max(value(s, a) for a in actions)
 
     def optim_value_a(self, actions):
@@ -370,6 +371,9 @@ class Values_Linear(Values):
         self.alpha = alpha
         self.beta = None
 
+    def make_elig(self, gamma, lambda_):
+        return type(self).Eligibility_Linear(self.vtype, gamma, lambda_)
+
     def value_sa(self, s, a):
         # TODO eradicate SAPair
         sa = SAPair(s, a)
@@ -385,6 +389,24 @@ class Values_Linear(Values):
 
 
 class Values_LinearBayesian(Values):
+    class Eligibility_LinearBayesian(Eligibility):
+        def reset(self):
+            self.traces = None
+
+        def trace_sa(self, s, a):
+            if self.traces is None:
+                self.traces = np.zeros(len(sa.phi))
+            return self.traces
+
+        def update_sa(self, s, a):
+            sa = SAPair(s, a)
+            if self.traces is None:
+                self.traces = np.zeros(len(sa.phi))
+            else:
+                self.traces *= self.gl
+            self.traces += sa.phi
+
+
     def __init__(self, vtype, l2, s2):
         super(Values_LinearBayesian, self).__init__(vtype)
         self.l2 = l2
@@ -394,6 +416,9 @@ class Values_LinearBayesian(Values):
         self.b = None
         self.m = None
         self.S = None
+
+    def make_elig(self, gamma, lambda_):
+        return type(self).Eligibility_LinearBayesian(self.vtype, gamma, lambda_)
 
     def value_sa(self, s, a):
         # TODO eradicate SAPair
