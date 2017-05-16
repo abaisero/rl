@@ -1,4 +1,5 @@
 import numpy as np
+import numpy.random as rnd
 
 from pytk.util import Keyable
 
@@ -143,10 +144,16 @@ class Model(object):
     #     raise NotImplementedError
 
     def sample_s0(self):
-        raise NotImplementedError
+        dist = self.pr_s0().items()
+        pr_s0 = [pr_s0 for _, pr_s0 in dist]
+        si = rnd.choice(xrange(len(dist)), p=pr_s0)
+        return dist[si][0]
 
     def sample_s1(self, s0, a):
-        raise NotImplementedError
+        dist = self.pr_s1(s0, a).items()
+        pr_s1 = [pr_s1 for _, pr_s1 in dist]
+        si = rnd.choice(xrange(len(dist)), p=pr_s1)
+        return dist[si][0]
 
     def sample_r(self, s0, a, s1):
         raise NotImplementedError
