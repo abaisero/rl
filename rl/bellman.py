@@ -4,13 +4,13 @@ class Bellman(object):
         self.model = model
         self.policy = policy
 
-    @classmethod
-    def Q(cls, Q, sys, model):
-        return cls(Q, sys, model)
+    @staticmethod
+    def Q(Q, sys, model):
+        return Bellman_Q(Q, sys, model)
 
-    @classmethod
-    def V(cls, V, sys, model):
-        return cls(V, sys, model)
+    @staticmethod
+    def V(V, sys, model):
+        return Bellman_V(V, sys, model)
 
     def __call__(self, *args, **kwargs):
         return self.rhs(*args, **kwargs)
@@ -61,7 +61,7 @@ class Bellman_V(Bellman):
         return sum(pr_a * self.__value(s, a) for a, pr_a in policy_dist.viewitems())
 
     def __rhs_optim(self, s):
-        return max(self.__value(s, a) for a in actions)
+        return max(self.__value(s, a) for a in self.sys.actions(s))
 
     def rhs(self, s, optim=False):
         return (self.__rhs_optim(s)
