@@ -10,7 +10,8 @@ import matplotlib.pyplot as plt
 
 from rl.problems import State, Action, taction, Model, System
 from rl.values import Values_Tabular
-from rl.algo.dp import policy_iteration, value_iteration
+# from rl.algo.dp import policy_iteration, value_iteration
+from rl.algo.dp import ValueIteration
 
 
 class GamblerState(State):
@@ -84,9 +85,9 @@ if __name__ == '__main__':
 
     V = Values_Tabular.V()
 
-    # TODO implement policy_iteration
+    # todo implement policy_iteration
     # policy_iteration(sys, V, gamma)
-    value_iteration.V(V, sys, sys.model)
+    ValueIteration.V(V, sys, sys.model).run()
 
     states = [s.cash for s in sys.states()]
     values = [V(s) for s in sys.states()]
