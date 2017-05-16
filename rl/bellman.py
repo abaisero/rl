@@ -22,8 +22,8 @@ class Bellman_Q(Bellman):
         self.Q = Q
 
     def __rhs(self, s0, value):
-        model_dist = self.model.pr_s1(s0, a)
-        return sum(pr_s1 * (self.model.E_r(s0, a, s1) + self.model.gamma * value(s1))
+        model_dist = self.model.dynamics.pr_s1(s0, a)
+        return sum(pr_s1 * (self.model.task.E_r(s0, a, s1) + self.model.task.gamma * value(s1))
                 for s1, pr_s1 in model_dist.viewitems())
 
     def __rhs_policy(self, s0):
@@ -51,9 +51,9 @@ class Bellman_V(Bellman):
         self.V = V
 
     def __value(self, s0, a):
-        model_dist = self.model.pr_s1(s0, a)
-        return sum(pr_s1 * (self.model.E_r(s0, a, s1) + self.model.gamma * self.V(s1))
-                for s1, pr_s1 in model_dist.viewitems())
+        dist_s1 = self.model.dynamics.dist_s1(s0, a)
+        return sum(pr_s1 * (self.model.task.E_r(s0, a, s1) + self.model.task.gamma * self.V(s1))
+                for s1, pr_s1 in dist_s1.viewitems())
 
     def __rhs_policy(self, s):
         actions = self.sys.actions(s)

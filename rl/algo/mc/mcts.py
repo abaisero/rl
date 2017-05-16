@@ -43,8 +43,7 @@ class MCTS(object):
                     break
 
                 a = self.policy_tree.sample(s0, actions)
-                s1 = self.model.sample_s1(s0, a)
-                r = self.model.sample_r(s0, a, s1)
+                r, s1 = self.model.sample_rs1(s0, a)
 
                 if verbose:
                     print '{}, {}, {}, {}'.format(s0, a, r, s1)
@@ -61,8 +60,7 @@ class MCTS(object):
                 actions = set(self.mdp.actions(s0)) - set(snode.children.itervalues())
                 ai = rnd.choice(len(actions))
                 a = tkitt.nth(ai, actions)
-                s1 = self.model.sample_s1(s0, a)
-                r = self.model.sample_r(s0, a, s1)
+                r, s1 = self.model.sample_rs1(s0, a)
 
                 if verbose:
                     print '{}, {}, {}, {}'.format(s0, a, r, s1)
@@ -78,8 +76,7 @@ class MCTS(object):
             while not s0.terminal:
                 actions = self.mdp.actions(s0)
                 a = self.policy_dflt.sample(s0, actions)
-                s1 = self.model.sample_s1(s0, a)
-                r = self.model.sample_r(s0, a, s1)
+                r, s1 = self.model.sample_rs1(s0, a)
 
                 g += gammat * r
                 gammat *= self.gamma

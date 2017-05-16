@@ -2,7 +2,7 @@ import numpy as np
 import numpy.random as rnd
 import matplotlib.pyplot as plt
 
-from rl.problems import State, Action, SAPair, Model
+from rl.problems import State, Action, Dynamics, Task, Model
 from rl.problems.mdp import MDP
 from rl.values import Values_TabularCounted, Values_LinearBayesian
 from rl.policy import Policy_random, Policy_UCB
@@ -46,11 +46,10 @@ class DiceAction(Action):
         return 'A(\'{}\')'.format('hit' if self.hit else 'stand')
 
 
-class DiceModel(Model):
-    def __init__(self, roll, reroll_r):
-        super(DiceModel, self).__init__()
+class DiceDynamics(Dynamics):
+    def __init__(self, roll):
+        super(DiceDynamics, self).__init__()
         self.roll = roll
-        self.reroll_r = reroll_r
 
     def sample_s0(self):
         return DiceState(self.roll(), 0)
@@ -60,6 +59,14 @@ class DiceModel(Model):
                 if a.stand
                 else DiceState(self.roll(), s0.nrolls + 1))
 
+
+class DiceTask(Task):
+    def __init__(self, nfaces, reroll_r):
+        super(DiceTask, self).__init__()
+        self.reroll_r = reroll_r
+
+        self.maxr = max(nfaces, -reroll_r)
+
     def sample_r(self, s0, a, s1):
         return s0.npips if a.stand else self.reroll_r
 
@@ -67,11 +74,14 @@ class DiceModel(Model):
 class DiceMDP(MDP):
     """ Dice game MDP. """
     def __init__(self, nfaces, reroll_r):
-        model = DiceModel(lambda: rnd.choice(nfaces)+1, reroll_r)
-        super(DiceMDP, self).__init__(model)
+        # model = DiceModel(lambda: rnd.choice(nfaces)+1, reroll_r)
+        # super(DiceMDP, self).__init__(model)
+        dyna = DiceDynamics(lambda: rnd.choice(nfaces)+1)
+        task = DiceTask(nfaces, reroll_r)
+        super(DiceMDP, self).__init__(Model(dyna, task))
 
-        self.nfaces = nfaces
-        self.maxr = max(abs(reroll_r), abs(nfaces))
+        # self.nfaces = nfaces
+        # self.maxr = max(abs(reroll_r), abs(nfaces))
 
         self.statelist_start = [DiceState(npips, 0) for npips in xrange(1, nfaces + 1)]
         self.actionlist = map(DiceAction, [True, False])
@@ -125,7 +135,7 @@ if __name__ == '__main__':
 
     # NOTE tabular AV
     Q = Values_TabularCounted.Q()
-    policy = Policy_UCB.Q(Q.value_sa, Q.confidence_sa, beta=mdp.maxr)
+    policy = Policy_UCB.Q(Q.value_sa, Q.confidence_sa, beta=mdp.model.task.maxr)
 
     # NOTE linear bayesian AV
     # Q = Values_LinearBayesian.Q(l2=100., s2=.1)
@@ -135,9 +145,9 @@ if __name__ == '__main__':
     # mcts = MCTS(mdp, mdp.model, policy_tree, policy_dflt, Q=Q)
 
     # NOTE algorithm
-    # algo = SARSA(mdp, mdp.model, policy, Q)  # Equivalent to SARSA_l(0.)
+    algo = SARSA(mdp, mdp.model, policy, Q)  # Equivalent to SARSA_l(0.)
     # algo = SARSA_l(mdp, mdp.model, policy, Q, .5)
-    algo = Qlearning(mdp, mdp.model, policy, Q)
+    # algo = Qlearning(mdp, mdp.model, policy, Q)
 
     # TODO
     # algo = MCTS(mdp, mdp.model, policy_tree, policy_dflt, Q=Q)
@@ -147,7 +157,7 @@ if __name__ == '__main__':
 
     verbose = true_every(100)
     for i in xrange(nepisodes):
-        s0 = mdp.model.sample_s0()
+        s0 = mdp.model.dynamics.sample_s0()
         algo.run(s0, verbose=verbose.true)
 
 

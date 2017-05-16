@@ -8,9 +8,8 @@ from pytk.decorators import memoizemethod
 
 import matplotlib.pyplot as plt
 
-from rl.problems import State, Action, taction, Model, System
+from rl.problems import State, Action, taction, Dynamics, Task, Model, System
 from rl.values import Values_Tabular
-# from rl.algo.dp import policy_iteration, value_iteration
 from rl.algo.dp import ValueIteration
 
 
@@ -41,17 +40,23 @@ class GamblerAction(Action):
         return 'A({})'.format(self.cash)
 
 
-class GamblerModel(Model):
+class GamblerDynamics(Dynamics):
     def __init__(self, goal, coinp):
-        super(GamblerModel, self).__init__()
+        super(GamblerDynamics, self).__init__()
         self.goal = goal
         self.coinp = coinp
 
-    def pr_s1(self, s0, a, s1=None):
-        pr_dict = defaultdict(int)
-        pr_dict[GamblerState(s0.cash + a.cash, self.goal)] = self.coinp
-        pr_dict[GamblerState(s0.cash - a.cash, self.goal)] = 1 - self.coinp
-        return pr_dict if s1 is None else pr_dict[s1]
+    def dist_s1(self, s0, a):
+        dist_s1 = defaultdict(int)
+        dist_s1[GamblerState(s0.cash + a.cash, self.goal)] = self.coinp
+        dist_s1[GamblerState(s0.cash - a.cash, self.goal)] = 1 - self.coinp
+        return dist_s1
+
+
+class GamblerTask(Task):
+    def __init__(self, goal):
+        super(GamblerTask, self).__init__()
+        self.goal = goal
 
     def E_r(self, s0, a, s1):
         return 1 if s1.terminal and s1.cash == self.goal else 0
@@ -59,9 +64,10 @@ class GamblerModel(Model):
 
 class GamblerSystem(System):
     def __init__(self, goal, coinp):
-        super(GamblerSystem, self).__init__(GamblerModel(goal, coinp))
+        dyna = GamblerDynamics(goal, coinp)
+        task = GamblerTask(goal)
+        super(GamblerSystem, self).__init__(Model(dyna, task))
         self.goal = goal
-        self.coinp = coinp
 
         self.statelist = [GamblerState(cash, goal) for cash in xrange(0, self.goal + 1)]
         self.actionlist = [GamblerAction(cash) for cash in xrange(1, self.goal)]
@@ -81,11 +87,11 @@ if __name__ == '__main__':
     coinp = .4
 
     sys = GamblerSystem(goal, coinp)
-    sys.model.gamma = 1
+    sys.model.task.gamma = 1.
 
     V = Values_Tabular.V()
 
-    # todo implement policy_iteration
+    # TODO implement policy_iteration
     # policy_iteration(sys, V, gamma)
     ValueIteration.V(V, sys, sys.model).run()
 

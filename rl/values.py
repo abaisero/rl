@@ -178,9 +178,9 @@ class Values(object):
 
     def optim_value_s(self, s, actions, model):
         def value(s0, a):
-            model_dist = model.pr_s1(s0, a)
-            return sum(pr_s1 * (model.E_r(s0, a, s1) + model.gamma * self.value(s1))
-                    for s1, pr_s1 in model_dist.iteritems())
+            dist_s1 = model.dynamics.dist_s1(s0, a)
+            return sum(pr_s1 * (model.task.E_r(s0, a, s1) + model.task.gamma * self.value(s1))
+                    for s1, pr_s1 in dist_s1.iteritems())
         return max(value(s, a) for a in actions)
 
     def optim_value_a(self, actions):
@@ -201,9 +201,9 @@ class Values(object):
 
     def optim_actions_s(self, s, actions, model):
         def value(s0, a):
-            model_dist = model.pr_s1(s0, a)
-            return sum(pr_s1 * (model.E_r(s0, a, s1) + model.gamma * self.value(s1)) for s1, pr_s1 in model_dist.iteritems())
-
+            dist_s1 = model.dynamics.dist_s1(s0, a)
+            return sum(pr_s1 * (model.task.E_r(s0, a, s1) + model.task.gamma * self.value(s1))
+                    for s1, pr_s1 in dist_s1.iteritems())
         return argmax(lambda a: value(s, a), actions, all_=True)
 
     def optim_actions_a(self, actions):
@@ -525,8 +525,8 @@ class Values_V2Q(Values_Value2Value):
         self.model = model
 
     def value_sa(self, s0, a):
-        model_dist = self.model.pr_s1(s0, a)
-        return sum(pr_s1 * (self.model.E_r(s0, a, s1) + self.model.gamma * self.ref(s1)) \
+        dist_s1 = self.model.dynamics.dist_s1(s0, a)
+        return sum(pr_s1 * (self.model.task.E_r(s0, a, s1) + self.model.task.gamma * self.ref(s1)) \
                 for s1, pr_s1 in model_dist.iteritems())
 
 

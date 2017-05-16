@@ -16,7 +16,7 @@ class Qlearning(Algo):
                 print '{}, {}, {}, {}'.format(s, a, r, s1)
 
             actions1 = self.sys.actions(s1)
-            target = r + self.model.gamma * self.Q.optim_value(s1, actions1)
+            target = r + self.model.task.gamma * self.Q.optim_value(s1, actions1)
             self.Q.update_target(s, a, target)
 
             s, actions = s1, actions1

@@ -2,7 +2,7 @@ import numpy as np
 import numpy.random as rnd
 import matplotlib.pyplot as plt
 
-from rl.problems import State, Action, SAPair, Model
+from rl.problems import State, Action, Dynamics, Task, Model
 from rl.problems.mdp import MDP
 from rl.values import Values_TabularCounted, Values_LinearBayesian
 from rl.policy import Policy_random, Policy_UCB
@@ -45,11 +45,10 @@ class DiceAction(Action):
         return 'A(\'{}\')'.format('hit' if self.hit else 'stand')
 
 
-class DiceModel(Model):
-    def __init__(self, roll, reroll_r):
-        super(DiceModel, self).__init__()
+class DiceDynamics(Dynamics):
+    def __init__(self, roll):
+        super(DiceDynamics, self).__init__()
         self.roll = roll
-        self.reroll_r = reroll_r
 
     def sample_s0(self):
         return DiceState(self.roll(), 0)
@@ -59,6 +58,14 @@ class DiceModel(Model):
                 if a.stand
                 else DiceState(self.roll(), s0.nrolls + 1))
 
+
+class DiceTask(Task):
+    def __init__(self, nfaces, reroll_r):
+        super(DiceTask, self).__init__()
+        self.reroll_r = reroll_r
+
+        self.maxr = max(nfaces, -reroll_r)
+
     def sample_r(self, s0, a, s1):
         return s0.npips if a.stand else self.reroll_r
 
@@ -66,11 +73,9 @@ class DiceModel(Model):
 class DiceMDP(MDP):
     """ Dice game MDP. """
     def __init__(self, nfaces, reroll_r):
-        model = DiceModel(lambda: rnd.choice(nfaces)+1, reroll_r)
-        super(DiceMDP, self).__init__(model)
-
-        self.nfaces = nfaces
-        self.maxr = max(abs(reroll_r), abs(nfaces))
+        dyna = DiceDynamics(lambda: rnd.choice(nfaces)+1)
+        task = DiceTask(nfaces, reroll_r)
+        super(DiceMDP, self).__init__(Model(dyna, task))
 
         self.statelist_start = [DiceState(npips, 0) for npips in xrange(1, nfaces + 1)]
         self.actionlist = map(DiceAction, [True, False])
@@ -125,7 +130,7 @@ if __name__ == '__main__':
 
     # NOTE linear bayesian AV
     Q = Values_LinearBayesian.Q(l2=100., s2=.1)
-    policy_tree = Policy_UCB.Q(Q.value, Q.confidence, beta=mdp.maxr)
+    policy_tree = Policy_UCB.Q(Q.value, Q.confidence, beta=mdp.model.task.maxr)
 
     policy_dflt = Policy_random.Q()
     mcts = MCTS(mdp, mdp.model, policy_tree, policy_dflt, Q=Q)
@@ -140,7 +145,7 @@ if __name__ == '__main__':
 
     verbose = true_every(100)
     for i in xrange(nepisodes):
-        s0 = mdp.model.sample_s0()
+        s0 = mdp.model.dynamics.sample_s0()
         mcts.run(s0, 1000, verbose=verbose.true)
 
 

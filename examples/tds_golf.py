@@ -1,7 +1,7 @@
 import numpy as np
 from scipy.stats import norm
 
-from rl.problems import State, Action, SAPair, Model
+from rl.problems import State, Action, SAPair, Dynamics, Task, Model
 from rl.problems.mdp import MDP
 from rl.values import Values_Tabular, Values_Linear, Values_LinearBayesian
 from rl.policy import Policy_random, Policy_egreedy, Policy_UCB
@@ -48,6 +48,36 @@ class GolfAction(Action):
         return 'A(club={})'.format(self.club)
 
 
+class GolfDynamics(Dynamics):
+    def __init__(self, s0dist_m, s0dist_s):
+        super(GolfDynamics, self).__init__()
+        self.s0dist_rv = norm(s0dist_m, s0dist_s)
+
+    def sample_s0(self):
+        s0dist = abs(self.s0dist_rv.rvs())
+        return GolfState(s0dist, 0)
+
+    def sample_s1(self, s0, a):
+        n, m, s, p = a.club
+
+        x = norm.rvs(m, s)
+        if p * x <= s0.dist <= x:
+            s1dist = 0.
+        else:
+            s1dist = abs(s0.dist - x)
+        return GolfState(s1dist, s0.nstrokes + 1)
+
+
+class GolfTask(Task):
+    def __init__(self, hole_r):
+        super(GolfTask, self).__init__()
+        self.hole_r = hole_r
+        self.maxr = max(1, hole_r)
+
+    def sample_r(self, s0, a, s1):
+        return self.hole_r if s1.terminal else -1.
+
+
 class GolfModel(Model):
     def __init__(self, s0dist_m, s0dist_s):
         super(GolfModel, self).__init__()
@@ -75,8 +105,10 @@ class GolfModel(Model):
 
 class GolfMDP(MDP):
     """ Golf game MDP """
-    def __init__(self, s0dist_m, s0dist_s, clubs):
-        super(GolfMDP, self).__init__(GolfModel(s0dist_m, s0dist_s))
+    def __init__(self, s0dist_m, s0dist_s, hole_r, clubs):
+        dyna = GolfDynamics(s0dist_m, s0dist_s)
+        task = GolfTask(hole_r)
+        super(GolfMDP, self).__init__(Model(dyna, task))
 
         self.clubs = clubs
 
@@ -99,7 +131,7 @@ if __name__ == '__main__':
         ('putt', 1, .05, 0),
     ]
 
-    mdp = GolfMDP(s0dist_m, s0dist_s, clubs)
+    mdp = GolfMDP(s0dist_m, s0dist_s, 10., clubs)
 
     # NOTE linear AV, egreedy policy
     # TODO doesn't work
@@ -108,7 +140,7 @@ if __name__ == '__main__':
 
     # NOTE bayesian linear AV, UCB policy
     Q = Values_LinearBayesian.Q(l2=100, s2=1)
-    policy = Policy_UCB.Q(Q.value, Q.confidence, beta=mdp.model.maxr)
+    policy = Policy_UCB.Q(Q.value, Q.confidence, beta=mdp.model.task.maxr)
 
     # NOTE algorithm
     algo = SARSA(mdp, mdp.model, policy, Q)  # Equivalent to SARSA_l(0.)
@@ -124,7 +156,7 @@ if __name__ == '__main__':
 
     verbose = true_every(100)
     for i in xrange(nepisodes):
-        s0 = mdp.model.sample_s0()
+        s0 = mdp.model.dynamics.sample_s0()
         algo.run(s0, verbose=verbose.true)
 
 

@@ -1,7 +1,7 @@
 import numpy as np
 from scipy.stats import multivariate_normal
 
-from rl.problems import State, Action, SAPair, Model
+from rl.problems import State, Action, SAPair, Dynamics, Task, Model
 from rl.problems.mdp import MDP
 from rl.values import Values_TabularCounted, Values_Linear, Values_LinearBayesian
 from rl.policy import Policy_random, Policy_egreedy, Policy_UCB
@@ -46,12 +46,10 @@ class GolfAction(Action):
         return 'A(club={})'.format(self.club)
 
 
-class GolfModel(Model):
+class GolfDynamics(Dynamics):
     def __init__(self, s0_dists):
-        super(GolfModel, self).__init__()
+        super(GolfDynamics, self).__init__()
         self.s0_dists = s0_dists
-
-        self.maxr = 1
 
     def sample_s0(self):
         dist = rnd.choice(self.s0_dists)
@@ -61,6 +59,12 @@ class GolfModel(Model):
         s1dist = abs(s0.dist - a.club)
         return GolfState(s1dist, s0.nstrokes + 1)
 
+
+class GolfTask(Task):
+    def __init__(self):
+        super(GolfTask, self).__init__()
+        self.maxr = 1
+
     def sample_r(self, s0, a, s1):
         return 0. if s1.terminal else -1.
 
@@ -68,9 +72,9 @@ class GolfModel(Model):
 class GolfMDP(MDP):
     """ Golf game MDP """
     def __init__(self, s0_dists, clubs):
-        super(GolfMDP, self).__init__(GolfModel(s0_dists))
-
-        self.clubs = clubs
+        dyna = GolfDynamics(s0_dists)
+        task = GolfTask()
+        super(GolfMDP, self).__init__(Model(dyna, task))
 
         # self.statelist_start =   # TODO I don't think I need this?
         self.actionlist = [GolfAction(club, clubs) for club in clubs]
@@ -95,7 +99,7 @@ if __name__ == '__main__':
     # model 1: tabular AV, UCB policy
     # works with both qlearning and sarsa
     Q = Values_TabularCounted.Q()
-    policy = Policy_UCB.Q(Q.value, Q.confidence, beta=mdp.model.maxr)
+    policy = Policy_UCB.Q(Q.value, Q.confidence, beta=mdp.model.task.maxr)
 
     # model 2: linear AV, egreedy policy
     # TODO doesn't work.  Best guess:  exploration does not cancel out bad updates
@@ -105,7 +109,7 @@ if __name__ == '__main__':
     # model 3: bayesian linear AV, UCB policy
     # works with both qlearning and sarsa (takes longer)
     # Q = Values_LinearBayesian.Q(l2=100, s2=1)
-    # policy = Policy_UCB.Q(Q.value, Q.confidence, beta=mdp.model.maxr)
+    # policy = Policy_UCB.Q(Q.value, Q.confidence, beta=mdp.model.task.maxr)
 
     # NOTE algorithm
     # algo = SARSA(mdp, mdp.model, policy, Q)  # Equivalent to SARSA_l(0.)
@@ -120,7 +124,7 @@ if __name__ == '__main__':
 
     verbose = true_every(100)
     for i in xrange(nepisodes):
-        s0 = mdp.model.sample_s0()
+        s0 = mdp.model.dynamics.sample_s0()
         algo.run(s0, verbose=verbose.true)
 
     # TODO code to evaluate current solution:

@@ -17,7 +17,7 @@ class SARSA(Algo):
             if verbose:
                 print '{}, {}, {}, {}, {}'.format(s, a, r, s1, a1)
 
-            target = r + self.model.gamma * self.Q(s1, a1)
+            target = r + self.model.task.gamma * self.Q(s1, a1)
             self.Q.update_target(s, a, target)
 
             s, a = s1, a1
@@ -35,7 +35,7 @@ class SARSA_l(Algo):
         if verbose:
             print '---'
 
-        with self.Q.eligibility(self.model.gamma, self.lambda_) as elig:
+        with self.Q.eligibility(self.model.task.gamma, self.lambda_) as elig:
             while not s.terminal:
                 r, s1 = self.model.sample_rs1(s, a)
                 actions1 = self.sys.actions(s1)
@@ -45,7 +45,7 @@ class SARSA_l(Algo):
                     print '{}, {}, {}, {}, {}'.format(s, a, r, s1, a1)
 
                 elig.update(s, a)
-                target = r + self.model.gamma * self.Q(s1, a1)
+                target = r + self.model.task.gamma * self.Q(s1, a1)
                 self.Q.update_target(s, a, target)
 
                 s, a = s1, a1
