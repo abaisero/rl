@@ -7,6 +7,7 @@ from rl.problems.mdp import MDP
 from rl.values import Values_TabularCounted, Values_LinearBayesian
 from rl.policy import Policy_random, Policy_UCB
 from rl.algo.mc import MCTS
+from rl.algo.td import SARSA, SARSA_l, Qlearning, Qlearning_l
 
 from pytk.util import true_every
 
@@ -114,34 +115,40 @@ def run(mdp, sm):
 
 
 if __name__ == '__main__':
+    import numpy.random as rnd
+    rnd.seed(0)
+
     mdp = DiceMDP(nfaces=6, reroll_r=-1)
 
     print 'MCTS'
     print '===='
 
     # NOTE tabular AV
-    # Q = Values_TabularCounted.Q()
-    # policy_tree = Policy_UCB.Q(Q.value_sa, Q.confidence_sa, beta=mdp.maxr)
+    Q = Values_TabularCounted.Q()
+    policy = Policy_UCB.Q(Q.value_sa, Q.confidence_sa, beta=mdp.maxr)
 
     # NOTE linear bayesian AV
-    Q = Values_LinearBayesian.Q(l2=100., s2=.1)
-    policy_tree = Policy_UCB.Q(Q.value, Q.confidence, beta=mdp.maxr)
+    # Q = Values_LinearBayesian.Q(l2=100., s2=.1)
+    # policy = Policy_UCB.Q(Q.value, Q.confidence, beta=mdp.maxr)
 
-    policy_dflt = Policy_random.Q()
-    mcts = MCTS(mdp, mdp.model, policy_tree, policy_dflt, Q=Q)
+    # policy_dflt = Policy_random.Q()
+    # mcts = MCTS(mdp, mdp.model, policy_tree, policy_dflt, Q=Q)
 
     # NOTE algorithm
-    # algo = MCTS(mdp, mdp.model, policy_tree, policy_dflt, Q=Q)
     # algo = SARSA(mdp, mdp.model, policy, Q)  # Equivalent to SARSA_l(0.)
     # algo = SARSA_l(mdp, mdp.model, policy, Q, .5)
-    # algo = Qlearning(mdp, mdp.model, policy, Q)
+    algo = Qlearning(mdp, mdp.model, policy, Q)
 
-    nepisodes = 100
+    # TODO
+    # algo = MCTS(mdp, mdp.model, policy_tree, policy_dflt, Q=Q)
+
+
+    nepisodes = 10000
 
     verbose = true_every(100)
     for i in xrange(nepisodes):
         s0 = mdp.model.sample_s0()
-        mcts.run(s0, 1000, verbose=verbose.true)
+        algo.run(s0, verbose=verbose.true)
 
 
     print
@@ -156,14 +163,14 @@ if __name__ == '__main__':
         actions = mdp.actions(s)
         print '{}: {}'.format(s, Q.optim_action(s, actions))
 
-    print
-    print 'optimal actions'
-    for s in mdp.statelist_start:
-        for nrolls in xrange(5):
-            s_ = DiceState(s.npips, nrolls)
-            actions = mdp.actions(s_)
-            a = Q.optim_action(s_, actions)
-            print '{} ; {} ; {:.2f} ; {:.2f}'.format(s_, a, Q(s, a), Q.confidence(s, a))
+    # print
+    # print 'optimal actions'
+    # for s in mdp.statelist_start:
+    #     for nrolls in xrange(3):
+    #         s_ = DiceState(s.npips, nrolls)
+    #         actions = mdp.actions(s_)
+    #         a = Q.optim_action(s_, actions)
+    #         print '{} ; {} ; {:.2f} ; {:.2f}'.format(s_, a, Q(s, a), Q.confidence(s, a))
 
 
     # try:
