@@ -1,3 +1,3 @@
-import value_iteration
 # TODO implement policy_iteration
-policy_iteration = None
+# from policy_iteration import PolicyEvaluation, PolicyIteration
+from value_iteration import ValueIteration
