@@ -8,7 +8,7 @@ from pytk.decorators import memoizemethod
 
 import matplotlib.pyplot as plt
 
-from rl.problems import State, Action, taction, Dynamics, Task, Model, System
+from rl.problems import State, Action, Dynamics, Task, Model, System
 from rl.values import Values_Tabular
 from rl.algo.dp import ValueIteration
 
@@ -75,7 +75,7 @@ class GamblerSystem(System):
     @memoizemethod
     def actions(self, s):
         if s.terminal:
-            return [taction]
+            return []
         maxbet = min(s.cash, self.goal - s.cash)
         return self.actionlist[:maxbet]
 

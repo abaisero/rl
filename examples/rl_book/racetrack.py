@@ -183,7 +183,7 @@ import numpy.random as rnd
 
 from pytk.decorators import memoizemethod
 
-from rl.problems import State, Action, taction, Model, System
+from rl.problems import State, Action, Model, System
 from rl.values import Values_Tabular
 from rl.policy import Policy_egreedy
 from rl.algo.mc import MC
@@ -386,7 +386,7 @@ class RacetrackSystem(System):
     # @memoizemethod
     # def actions(self, s):
     #     if s.terminal:
-    #         return [taction]
+    #         return []
     #     return self.actionlist
     #     # TODO
     #     # ...

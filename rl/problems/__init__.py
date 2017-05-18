@@ -5,13 +5,6 @@ from pytk.util import Keyable
 from pytk.more_collections import defaultdict_noinsert
 
 
-taction = type(
-    'TerminalAction',
-    (object,),
-    dict(__str__=lambda self: 'A(Terminal)'),
-)()
-
-
 class State(Keyable):
     pass
 
@@ -222,9 +215,7 @@ class System(object):
 
     def actions(self, s):
         """ if the actionset depends on the state, this should be overridden """
-        if s.terminal:
-            return [taction]
-        return self.actionlist
+        return self.actionlist if not s.terminal else []
 
 
 class RLProblem(object):
@@ -235,6 +226,4 @@ class RLProblem(object):
 
     def actions(self, s):
         """ if the actionset depends on the state, this should be overridden """
-        if s.terminal:
-            return [taction]
-        return self.actionlist
+        return self.actionlist if not s.terminal else []

@@ -11,7 +11,7 @@ from GPy.models import GPRegression
 from GPy.kern import Linear
 from rl.learning import LearningRate_geom, LearningRate_const
 
-from rl.problems import taction, SAPair
+from rl.problems import SAPair
 
 from pytk.util import argmax
 from pytk.more_collections import defaultdict_noinsert

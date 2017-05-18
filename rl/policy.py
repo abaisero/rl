@@ -6,7 +6,7 @@ import math
 import numpy as np
 import numpy.random as rnd
 
-from rl.problems import taction, SAPair
+from rl.problems import SAPair
 
 from pytk.util import argmax
 
