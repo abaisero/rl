@@ -1,8 +1,13 @@
 from rl.algo.episode import run_episode, make_returns
-from . import Algo
 
 
-class MC(Algo):
+class MC(object):
+    def __init__(self, sys, model, policy, Q):
+        self.sys = sys
+        self.model = model
+        self.policy = policy
+        self.Q = Q
+
     def run(self, s, verbose=False):
         first_visit = True
 

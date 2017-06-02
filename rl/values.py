@@ -375,11 +375,10 @@ class Values_Linear(Values):
         return type(self).Eligibility_Linear(self.vtype, gamma, lambda_)
 
     def value_sa(self, s, a):
-        # TODO eradicate SAPair
-        sa = SAPair(s, a)
-        return (0.
-                if s.terminal or self.beta is None
-                else np.dot(sa.phi, self.beta))
+        if self.beta is not None:
+            # TODO eradicate SAPair
+            sa = SAPair(s, a)
+            return np.dot(sa.phi, self.beta)
 
     def update_target_sa(self, s, a, target):
         sa = SAPair(s, a)
@@ -421,20 +420,17 @@ class Values_LinearBayesian(Values):
         return type(self).Eligibility_LinearBayesian(self.vtype, gamma, lambda_)
 
     def value_sa(self, s, a):
-        # TODO eradicate SAPair
-        sa = SAPair(s, a)
-        return (0.
-                if s.terminal or self.m is None
-                else np.dot(sa.phi, self.m))
+        if self.m is not None:
+            # TODO eradicate SAPair
+            sa = SAPair(s, a)
+            return np.dot(sa.phi, self.m)
 
     def confidence_sa(self, s, a):
-        if s.terminal:
-            return 0.
         # TODO eradicate SAPair
         sa = SAPair(s, a)
-        return (np.sqrt(self.l2 * np.dot(sa.phi, sa.phi))
-                if self.S is None
-                else np.sqrt(la.multi_dot([sa.phi, self.S, sa.phi])))
+        if self.S is not None:
+            return np.sqrt(la.multi_dot([sa.phi, self.S, sa.phi]))
+        return np.sqrt(self.l2 * np.dot(sa.phi, sa.phi))
 
     def update_target_sa(self, s, a, target):
         # TODO eradicate SAPair
@@ -479,13 +475,12 @@ class Values_GP(Values):
                 self.gp.optimize()
 
     def value_sa(self, s, a):
-        if s.terminal or self.gp is None:
-            return 0.
-        # TODO eradicate SAPair
-        sa = SAPair(s, a)
-        sa_phi = np.atleast_2d(sa.phi)
-        m, _ = self.gp.predict(sa_phi)
-        return np.asscalar(m)
+        if self.gp is not None:
+            # TODO eradicate SAPair
+            sa = SAPair(s, a)
+            sa_phi = np.atleast_2d(sa.phi)
+            m, _ = self.gp.predict(sa_phi)
+            return np.asscalar(m)
 
     def confidence_sa(self, s, a):
         # TODO implement

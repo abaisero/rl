@@ -47,12 +47,9 @@ class DiceAction(Action):
 
 
 class DiceDynamics(Dynamics):
-    def __init__(self, nfaces):
+    def __init__(self, roll):
         super(DiceDynamics, self).__init__()
-        self.nfaces  = nfaces
-
-    def roll(self):
-        return rnd.choice(self.nfaces) + 1
+        self.roll = roll
 
     def sample_s0(self):
         return DiceState(self.roll(), 0)
@@ -70,9 +67,6 @@ class DiceTask(Task):
 
         self.maxr = max(nfaces, -reroll_r)
 
-    def is_terminal(self, s):
-        return s.terminal
-
     def sample_r(self, s0, a, s1):
         return s0.npips if a.stand else self.reroll_r
 
@@ -82,7 +76,7 @@ class DiceMDP(MDP):
     def __init__(self, nfaces, reroll_r):
         # model = DiceModel(lambda: rnd.choice(nfaces)+1, reroll_r)
         # super(DiceMDP, self).__init__(model)
-        dyna = DiceDynamics(nfaces)
+        dyna = DiceDynamics(lambda: rnd.choice(nfaces)+1)
         task = DiceTask(nfaces, reroll_r)
         super(DiceMDP, self).__init__(Model(dyna, task))
 
@@ -134,10 +128,7 @@ if __name__ == '__main__':
     import numpy.random as rnd
     rnd.seed(0)
 
-    nfaces = 6
-    reroll_r = -1
-
-    mdp = DiceMDP(nfaces=nfaces, reroll_r=reroll_r)
+    mdp = DiceMDP(nfaces=6, reroll_r=-1)
 
     print 'MCTS'
     print '===='
@@ -154,9 +145,9 @@ if __name__ == '__main__':
     # mcts = MCTS(mdp, mdp.model, policy_tree, policy_dflt, Q=Q)
 
     # NOTE algorithm
-    algo = SARSA(mdp, mdp.model, policy, Q)  # Equivalent to SARSA_l(0.)
+    # algo = SARSA(mdp, mdp.model, policy, Q)  # Equivalent to SARSA_l(0.)
     # algo = SARSA_l(mdp, mdp.model, policy, Q, .5)
-    # algo = Qlearning(mdp, policy, Q)
+    algo = Qlearning(mdp, mdp.model, policy, Q)
 
     # TODO
     # algo = MCTS(mdp, mdp.model, policy_tree, policy_dflt, Q=Q)

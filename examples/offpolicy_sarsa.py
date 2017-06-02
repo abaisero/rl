@@ -47,18 +47,15 @@ class DiceAction(Action):
 
 
 class DiceDynamics(Dynamics):
-    def __init__(self, nfaces):
+    def __init__(self, roll):
         super(DiceDynamics, self).__init__()
-        self.nfaces  = nfaces
-
-    def roll(self):
-        return rnd.choice(self.nfaces) + 1
+        self.roll = roll
 
     def sample_s0(self):
         return DiceState(self.roll(), 0)
 
     def sample_s1(self, s0, a):
-        return (DiceState(s0.npips, s0.nrolls, True)
+        return (DiceState(s0.npips, s0.nrolls, terminal=True)
                 if a.stand
                 else DiceState(self.roll(), s0.nrolls + 1))
 
@@ -70,9 +67,6 @@ class DiceTask(Task):
 
         self.maxr = max(nfaces, -reroll_r)
 
-    def is_terminal(self, s):
-        return s.terminal
-
     def sample_r(self, s0, a, s1):
         return s0.npips if a.stand else self.reroll_r
 
@@ -82,7 +76,7 @@ class DiceMDP(MDP):
     def __init__(self, nfaces, reroll_r):
         # model = DiceModel(lambda: rnd.choice(nfaces)+1, reroll_r)
         # super(DiceMDP, self).__init__(model)
-        dyna = DiceDynamics(nfaces)
+        dyna = DiceDynamics(lambda: rnd.choice(nfaces)+1)
         task = DiceTask(nfaces, reroll_r)
         super(DiceMDP, self).__init__(Model(dyna, task))
 
@@ -134,35 +128,20 @@ if __name__ == '__main__':
     import numpy.random as rnd
     rnd.seed(0)
 
-    nfaces = 6
-    reroll_r = -1
-
-    mdp = DiceMDP(nfaces=nfaces, reroll_r=reroll_r)
+    mdp = DiceMDP(nfaces=6, reroll_r=-1)
 
     print 'MCTS'
     print '===='
 
-    # NOTE tabular AV
     Q = Values_TabularCounted.Q()
+    # policy = Policy_random.Q()
     policy = Policy_UCB.Q(Q.value_sa, Q.confidence_sa, beta=mdp.model.task.maxr)
 
-    # NOTE linear bayesian AV
-    # Q = Values_LinearBayesian.Q(l2=100., s2=.1)
-    # policy = Policy_UCB.Q(Q.value, Q.confidence, beta=mdp.maxr)
-
-    # policy_dflt = Policy_random.Q()
-    # mcts = MCTS(mdp, mdp.model, policy_tree, policy_dflt, Q=Q)
-
-    # NOTE algorithm
-    algo = SARSA(mdp, mdp.model, policy, Q)  # Equivalent to SARSA_l(0.)
-    # algo = SARSA_l(mdp, mdp.model, policy, Q, .5)
-    # algo = Qlearning(mdp, policy, Q)
-
-    # TODO
-    # algo = MCTS(mdp, mdp.model, policy_tree, policy_dflt, Q=Q)
+    # algo = SARSA(mdp, mdp.model, policy, Q)
+    algo = SARSA_l(mdp, mdp.model, policy, Q, .5)
 
 
-    nepisodes = 10000
+    nepisodes = 100000
 
     verbose = true_every(100)
     for i in xrange(nepisodes):
@@ -181,34 +160,3 @@ if __name__ == '__main__':
     for s in mdp.statelist_start:
         actions = mdp.actions(s)
         print '{}: {}'.format(s, Q.optim_action(s, actions))
-
-    # print
-    # print 'optimal actions'
-    # for s in mdp.statelist_start:
-    #     for nrolls in xrange(3):
-    #         s_ = DiceState(s.npips, nrolls)
-    #         actions = mdp.actions(s_)
-    #         a = Q.optim_action(s_, actions)
-    #         print '{} ; {} ; {:.2f} ; {:.2f}'.format(s_, a, Q(s, a), Q.confidence(s, a))
-
-
-    # try:
-    #     print 'Q.m:\n{}'.format(Q.m)
-    # except AttributeError:
-    #     pass
-
-    # ax1 = plt.subplot(121)
-    # run(mdp, mcts)
-    # print '==='
-
-    # print 'TDSearch'
-    # print '===='
-    # Q = ActionValues(mdp)
-    # policy = Policy_UCB1(mdp.actions, Q, beta=mdp.maxr)
-    # tds = TDSearch(mdp, mdp.model, policy, Q=Q)
-
-    # ax2 = plt.subplot(122, sharey=ax1)
-    # run(mdp, tds)
-    # print '==='
-
-    # plt.show()

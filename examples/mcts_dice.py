@@ -126,11 +126,13 @@ if __name__ == '__main__':
 
     # NOTE tabular AV
     # Q = Values_TabularCounted.Q()
-    # policy_tree = Policy_UCB.Q(Q.value_sa, Q.confidence_sa, beta=mdp.maxr)
+    # # policy_tree = Policy_UCB.Q(Q.value_sa, Q.confidence_sa, beta=mdp.task.maxr)
+    # policy_tree = Policy_UCB.Q(Q.value_sa, Q.confidence_sa, beta=6)
 
     # NOTE linear bayesian AV
     Q = Values_LinearBayesian.Q(l2=100., s2=.1)
-    policy_tree = Policy_UCB.Q(Q.value, Q.confidence, beta=mdp.model.task.maxr)
+    # policy_tree = Policy_UCB.Q(Q.value, Q.confidence, beta=mdp.model.task.maxr)
+    policy_tree = Policy_UCB.Q(Q.value, Q.confidence, beta=6)
 
     policy_dflt = Policy_random.Q()
     mcts = MCTS(mdp, mdp.model, policy_tree, policy_dflt, Q=Q)

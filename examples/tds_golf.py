@@ -5,7 +5,7 @@ from rl.problems import State, Action, SAPair, Dynamics, Task, Model
 from rl.problems.mdp import MDP
 from rl.values import Values_Tabular, Values_Linear, Values_LinearBayesian
 from rl.policy import Policy_random, Policy_egreedy, Policy_UCB
-from rl.algo.td import SARSA, SARSA_l, Qlearning, Qlearning_l
+from rl.algo.td import SARSA, SARSA_l, Qlearning
 
 from pytk.util import true_every
 
@@ -149,7 +149,6 @@ if __name__ == '__main__':
 
     # TODO not implemented yet
     # algo = MC(mdp, mdp.model, policy, Q)  # Equivalent to SARSA_l(1.)
-    # algo = Qlearning_l(mdp, mdp.model, policy, Q, .5)
 
 
     nepisodes = 20000

@@ -211,11 +211,11 @@ class System(object):
         self.model = model
 
     def states(self, wterm=False):
-        return (s for s in self.statelist if wterm or not s.terminal)
+        return (s for s in self.statelist if wterm or not self.model.task.is_terminal(s))
 
     def actions(self, s):
         """ if the actionset depends on the state, this should be overridden """
-        return self.actionlist if not s.terminal else []
+        return self.actionlist #  if not self.model.task.is_terminal(s) else []
 
 
 class RLProblem(object):
@@ -226,4 +226,4 @@ class RLProblem(object):
 
     def actions(self, s):
         """ if the actionset depends on the state, this should be overridden """
-        return self.actionlist if not s.terminal else []
+        return self.actionlist #  if not self.model.task.is_terminal(s) else []
