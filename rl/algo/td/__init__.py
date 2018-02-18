@@ -9,5 +9,5 @@ class Algo(object):
         raise NotImplementedError
 
 
-from sarsa import SARSA, SARSA_l
-from qlearning import Qlearning, Qlearning_l
+from .sarsa import SARSA, SARSA_l
+from .qlearning import Qlearning, Qlearning_l

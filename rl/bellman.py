@@ -23,8 +23,8 @@ class Bellman_Q(Bellman):
 
     def __rhs(self, s0, value):
         model_dist = self.model.pr_s1(s0, a)
-        return sum(pr_s1 * (self.model.E_r(s0, a, s1) + self.model.gamma * value(s1))
-                for s1, pr_s1 in model_dist.viewitems())
+        return sum(pr_s1 * (self.model.rmodel.E_r(s0, a, s1) + self.model.gamma * value(s1))
+                for s1, pr_s1 in model_dist.items())
 
     def __rhs_policy(self, s0):
         def value(s1):
@@ -36,7 +36,7 @@ class Bellman_Q(Bellman):
         def value(s1):
             actions1 = self.sys.actions(s1)
             policy_dist = self.policy.dist(s1, actions1)
-            return sum(pr_a1 * self.Q(s1, a1) for a1, pr_a1 in policy_dist.viewitems())
+            return sum(pr_a1 * self.Q(s1, a1) for a1, pr_a1 in policy_dist.items())
         return self.__rhs(s0, value)
 
     def rhs(self, s, a, optim=False):
@@ -51,17 +51,19 @@ class Bellman_V(Bellman):
         self.V = V
 
     def __value(self, s0, a):
-        model_dist = self.model.pr_s1(s0, a)
-        return sum(pr_s1 * (self.model.E_r(s0, a, s1) + self.model.gamma * self.V(s1))
-                for s1, pr_s1 in model_dist.viewitems())
+        model_dist = self.model.s1model.dist_s1(s0, a)
+        return sum(pr_s1 * (self.model.rmodel.E_r(s0, a, s1) + self.model.gamma * self.V(s1))
+                for s1, pr_s1 in model_dist.items())
 
     def __rhs_policy(self, s):
-        actions = self.sys.actions(s)
+        # actions = self.sys.actions(s)
+        actions = self.sys.actions
         policy_dist = self.policy.dist(s, actions)
-        return sum(pr_a * self.__value(s, a) for a, pr_a in policy_dist.viewitems())
+        return sum(pr_a * self.__value(s, a) for a, pr_a in policy_dist.items())
 
     def __rhs_optim(self, s):
-        return max(self.__value(s, a) for a in self.sys.actions(s))
+        return max(self.__value(s, a) for a in self.sys.actions)
+        # return max(self.__value(s, a) for a in self.sys.actions(s))
 
     def rhs(self, s, optim=False):
         return (self.__rhs_optim(s)

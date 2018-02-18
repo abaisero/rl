@@ -3,26 +3,40 @@ import numpy.random as rnd
 from rl.problems import State, SAPair
 from rl.problems.bandits.cb import ContextualBandit, CBModel, CB
 from rl.values import Values_TabularCounted
-from rl.policy import Policy_UCB
+from rl.policy.policy import Policy_UCB
+
+import pytk.factory as factory
 
 
+nsides = 6
 def roll():
-    return rnd.choice(6) + 1
+    return rnd.choice(nsides) + 1
 
 
-class DiceState(State):
-    def __init__(self, npips):
-        self.setkey((npips,))
+values = list(range(1, nsides+1))
+sfactory = factory.FactoryChoice(values)
 
-        self.npips = npips
 
-    def __str__(self):
-        return 'S(npips={})'.format(self.npips)
+# class DiceState(State):
+#     def __init__(self, npips):
+#         # TODO I used to do this because I needed a hash to index in a table..  If I use a factory, I can just use the index!!
+#         self.setkey((npips,))
+
+#         self.npips = npips
+
+#     def __str__(self):
+#         return f'S(npips={self.npips})'
 
 
 class DiceModel(CBModel):
     def sample_s0(self):
-        return DiceState(roll())
+        return sfactory.item(value=roll())
+        # return DiceState(roll())
+
+
+# python3 doesn't have cmp
+def cmp(a, b):
+    return ((a>b) - (a<b))
 
 
 class DiceBandit(ContextualBandit):
@@ -33,12 +47,12 @@ class DiceBandit(ContextualBandit):
         self.maxr = 1
 
     def sample_r(self, s):
-        return int(cmp(roll(), s.npips) == self.sign)
+        return int(cmp(roll(), s.value) == self.sign)
 
     def __str__(self):
         sign = ('+' if self.sign > 0 else
                 '-' if self.sign < 0 else '=')
-        return 'B({})'.format(sign)
+        return f'B({sign})'
 
 
 if __name__ == '__main__':
@@ -62,18 +76,20 @@ if __name__ == '__main__':
         # plt.waitforbuttonpress()
 
         if i % 1000 == 0:
-            print '{} {} {}'.format(s, b, r)
+            print(f'{s} {b} {r}')
         Q.update_target(s, b, r)
 
-    print
-    print 'final values'
-    for i in range(1, 7):
-        s = DiceState(i)
+    print()
+    print('final values')
+    for npips in values:
+        # s = DiceState(i)
+        s = sfactory.item(value=npips)
         for b in bandits:
-            print '{} {}: {:.2f} {:.2f}'.format(s, b, Q(s, b), Q.confidence(s, b))
+            print(f'{s} {b}: {Q(s, b):.2f} {Q.confidence(s, b):.2f}')
 
-    print
-    print 'optim actions'
-    for i in range(1, 7):
-        s = DiceState(i)
-        print '{}: {}'.format(s, Q.optim_action(s, cb.actionlist))
+    print()
+    print('optim actions')
+    for npips in values:
+        # s = DiceState(i)
+        s = sfactory.item(value=npips)
+        print(f'{s}: {Q.optim_action(s, cb.actionlist)}')

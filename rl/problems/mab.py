@@ -1,11 +1,66 @@
-import numpy as np
-import numpy.random as rnd
-from scipy.stats import norm
+from . import Model_
 
-from .. import Action, Model, RLProblem
-from . import Bandit
 
-from pytk.util import argmax
+class Environment:
+    def __init__(self, afactory):
+        self.afactory = afactory
+
+    @property
+    def actions(self):
+        return self.afactory.items
+
+    @property
+    def nactions(self):
+        return self.afactory.nitems
+
+
+class RewardModel(Model_):
+    def __init__(self, env):
+        super().__init__()
+        self.env = env
+
+    def dist(self, a):
+        try:
+            return self._dist(a)
+        except TypeError:
+            raise NotImplementedError
+
+    def pr(self, a, r):
+        try:
+            return self._pr(a, r)
+        except TypeError:
+            return self.dist(a)[r]
+
+    def sample(self, a):
+        try:
+            return self._sample(a)
+        except TypeError:
+            raise NotImplementedError
+
+    def E(self, a):
+        try:
+            return self._E(a)
+        except TypeError:
+            raise NotImplementedError
+
+
+class Model:
+    def __init__(self, env, rmodel):
+        self.env = env
+        self.r = rmodel
+
+    # TODO how to combine factory design with current bandit design?
+
+    @property
+    def max_r(self):
+        return max(a.max_r for a in self.env.actions)
+
+    @property
+    def optim_a(self):
+        return argmax(lambda a: a.E_r, self.env.actions, all_=True)
+
+
+# TODO I kinda like some smaller stuff from previous implementation
 
 
 ###############################################################################

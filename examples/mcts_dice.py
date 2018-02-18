@@ -81,30 +81,30 @@ def run(mdp, sm):
 
     actions = []
     for s0 in mdp.statelist_start:
-        print 'state: {}'.format(s0)
+        print(f'state: {s0}')
         a, values = sm.run(s0, 10000, 100, verbose=True)
         for a_ in mdp.actions(s0):
             root_values[s0, a_] = values[a_]
 
-        print 'action: {}'.format(a)
-        print '---'
+        print(f'action: {a}')
+        print('---')
         actions.append((s0, a))
 
-    print 'cache'
+    print('cache')
     for s in mdp.statelist_start:
         for a in mdp.actions(s):
-            print '{}: {}, {}'.format((s, a), Q(s, a), Q.n(s, a))
+            print(f'{s, a}: {Q(s, a)}, {Q.n(s, a)}')
 
-    print 'optimal actions'
+    print('optimal actions')
     for s, a in actions:
-        print '{}: {}'.format(s, a)
+        print(f'{s}: {a}')
 
-    print 'optimal actions'
+    print('optimal actions')
     for s in mdp.statelist_start:
         for nrolls in xrange(5):
             s_ = DiceState(s.npips, nrolls)
             a = sm.policy_greedy.sample_a(s_)
-            print '{} ; {} ; {} ; {}'.format(s_, a, Q(s_, a), Q.confidence(s_, a))
+            print(f'{s_} ; {a} ; {Q(s_, a)} ; {Q.confidence(s_, a)}')
 
     plt.title(type(sm))
     for (s, a), values in root_values.iteritems():
@@ -116,8 +116,8 @@ def run(mdp, sm):
 if __name__ == '__main__':
     mdp = DiceMDP(nfaces=6, reroll_r=-1)
 
-    print 'MCTS'
-    print '===='
+    print('MCTS')
+    print('====')
 
     # NOTE tabular AV
     # Q = Values_TabularCounted.Q()
@@ -144,26 +144,26 @@ if __name__ == '__main__':
         mcts.run(s0, 1000, verbose=verbose.true)
 
 
-    print
-    print 'cache'
+    print()
+    print('cache')
     for s in mdp.statelist_start:
         for a in mdp.actions(s):
-            print '{}, {}: {:.2f}, {:.2f}'.format(s, a, Q(s, a), Q.confidence(s, a))
+            print(f'{s}, {a}: {Q(s, a):.2f}, {Q.confidence(s, a):.2f}')
 
-    print
-    print 'optimal actions'
+    print()
+    print('optimal actions')
     for s in mdp.statelist_start:
         actions = mdp.actions(s)
-        print '{}: {}'.format(s, Q.optim_action(s, actions))
+        print(f'{s}: {Q.optim_action(s, actions)}')
 
-    print
-    print 'optimal actions'
+    print()
+    print('optimal actions')
     for s in mdp.statelist_start:
         for nrolls in xrange(5):
             s_ = DiceState(s.npips, nrolls)
             actions = mdp.actions(s_)
             a = Q.optim_action(s_, actions)
-            print '{} ; {} ; {:.2f} ; {:.2f}'.format(s_, a, Q(s, a), Q.confidence(s, a))
+            print(f'{s_} ; {a} ; {Q(s, a):.2f} ; {Q.confidence(s, a):.2f}')
 
 
     # try:

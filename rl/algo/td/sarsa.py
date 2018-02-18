@@ -7,15 +7,17 @@ class SARSA(Algo):
         a = self.policy.sample(s, actions)
 
         if verbose:
-            print '---'
+            print('---')
 
         while not s.terminal:
-            r, s1 = self.model.sample_rs1(s, a)
+            s1 = self.model.s1.sample(s, a)
+            r = self.model.r.sample(s, a, s1)
+            # r, s1 = self.model.sample_rs1(s, a)
             actions1 = self.sys.actions(s1)
             a1 = self.policy.sample(s1, actions1)
 
             if verbose:
-                print '{}, {}, {}, {}, {}'.format(s, a, r, s1, a1)
+                print(f'{s}, {a}, {r}, {s1}, {a1}')
 
             target = r + self.model.gamma * self.Q(s1, a1)
             self.Q.update_target(s, a, target)
@@ -33,16 +35,18 @@ class SARSA_l(Algo):
         a = self.policy.sample(s, actions)
 
         if verbose:
-            print '---'
+            print('---')
 
-        with self.Q.eligibility(self.model.gamma, self.lambda_) as elig:
+        with self.Q.eligibility(self.model.gamma, self.lambda_) as elig:  # interesting;; this creates an eligibility trace structure.....
             while not s.terminal:
-                r, s1 = self.model.sample_rs1(s, a)
+                s1 = self.model.s1.sample(s, a)
+                r = self.model.r.sample(s, a, s1)
+                # r, s1 = self.model.sample_rs1(s, a)
                 actions1 = self.sys.actions(s1)
                 a1 = self.policy.sample(s1, actions1)
 
                 if verbose:
-                    print '{}, {}, {}, {}, {}'.format(s, a, r, s1, a1)
+                    print(f'{s}, {a}, {r}, {s1}, {a1}')
 
                 elig.update(s, a)
                 target = r + self.model.gamma * self.Q(s1, a1)

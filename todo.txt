@@ -1,8 +1,8 @@
-change 'problems' into 'systems' | id:01857a129265794cf3b9059f31e15015e1e2ceff
-code to evaluate solution after search algo.  print current Q estimate, MC-Q estimate, and a run-through. | id:08ca1768c3161f51f618c848288fcebc3ba88f2a
-better/clearer MC, MRP, MDP, Bandit classes which define the problems | id:33ace47a67742782e331627944d9b1066e4d9712
-implement something for bandit; maybe text-book example of info-state space solution? | id:3bd98757ab8365ebec94768b885f4beea19ded4f
-refactor everything in unified interface:  MarkovChain->MarkovRewardProcess->MDP; Bandits->ContextualBandits->MDP | id:82e37f2f0b50f33ff5ed89da7d987649cbb27a99
-remove count and learning rate from ActionValue class, somehow | id:8b9aa767d18a695aba6a304d1192e73da53146a2
-token terminal state which can be compared to any other state using State.__eq__ | id:992152409837906c1604a8db8b92d569efdff35c
-UCB does not work for continuous state-space | id:a111b7f6e96355a6d41b7f6236da87c8f64bb02a
+distributions as arrays | id:0b04d6fadbb5a2a9e99b720a150219972ce96cb3
+implement mtcs | id:0b96dab6aa48de8bfbe91ef60bfd8dccc6e05035
+read-only values | id:0fee7c0a3d499919b8deed6fed86f8237d9ffa47
+handle .pomdp and .policy structures | id:284735f5d2aabaf170cff275558c6fad2bf39081
+implement pomcp | id:2bd98257b0ec4165752ea8d6f6532993d318532f
+implement semi-gradient td(0) for estimation | id:3854af98bedae800145a5accd3f5d3870082301b
+distributions as arrays;  not just iterators.. | id:9abe0824f60124bde0a7a7a721da44862e3d4e08
+implement gradient monte carlo for estimation | id:c76008fd753b6e9c9ca434a3b65b87c4f1c8f05a

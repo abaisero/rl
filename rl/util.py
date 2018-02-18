@@ -1,3 +1,5 @@
+# TODO move somewhere else and/or clean or whatever
+
 class Node(object):
     def __init__(self, data, parent=None, meta=None):
         if meta is None:

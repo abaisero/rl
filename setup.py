@@ -19,7 +19,8 @@ setup(
     download_url='https://github.com/bigblindbais/rl',
     author_email='andrea.baisero@gmail.com',
     version='0.0.1',
+    install_requires=['numpy', 'scipy'],  #  GPy, pytk
     packages=['rl'],
     license='MIT',
-    # test_suite='tests',
+    test_suite='tests',
 )

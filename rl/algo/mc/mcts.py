@@ -4,7 +4,7 @@ import pytk.itt as tkitt
 
 from rl.problems import SAPair
 from rl.util import Tree
-from rl.policy import Policy_egreedy
+from rl.policy.policy import Policy_egreedy
 
 
 class MCTS(object):
@@ -33,7 +33,7 @@ class MCTS(object):
             # SELECTION
             # TODO there has to be a better way.. without me knowing whether verbose is a bool or an instance which evaluates to a bool
             if verbose:
-                print '---'
+                print('---')
 
             while True:
                 s0 = snode.data
@@ -47,7 +47,7 @@ class MCTS(object):
                 r = self.model.sample_r(s0, a, s1)
 
                 if verbose:
-                    print '{}, {}, {}, {}'.format(s0, a, r, s1)
+                    print(f'{s0}, {a}, {r}, {s1}')
                 snode.meta['r'] = r
 
                 anode = snode.children[a]
@@ -65,7 +65,7 @@ class MCTS(object):
                 r = self.model.sample_r(s0, a, s1)
 
                 if verbose:
-                    print '{}, {}, {}, {}'.format(s0, a, r, s1)
+                    print(f'{s0}, {a}, {r}, {s1}')
 
                 snode.meta['r'] = r
                 anode = snode.add_child(a)
@@ -84,7 +84,7 @@ class MCTS(object):
                 g += gammat * r
                 gammat *= self.gamma
                 if verbose:
-                    print '{}, {}, {}, {}'.format(s0, a, r, s1)
+                    print(f'{s0}, {a}, {r}, {s1}')
 
                 s0 = s1
 
@@ -95,7 +95,7 @@ class MCTS(object):
                 self.Q.update_target(snode.data, anode.data, g)
                 anode = snode.parent
             if verbose:
-                print 'Total return: {}'.format(g)
+                print(f'Total return: {g}')
 
             for a in self.mdp.actions(sroot):
                 root_values[a].append(self.Q(sroot, a))

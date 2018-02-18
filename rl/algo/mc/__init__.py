@@ -9,5 +9,6 @@ class Algo(object):
         raise NotImplementedError
 
 
-from mc import MC
-from mcts import MCTS
+from .mc import MC
+from .mcts import MCTS
+# from .pomcp import POMCP

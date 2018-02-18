@@ -3,7 +3,21 @@ from rl.problems import SAPair
 
 # TODO As opposed to a policy, an agent has an identity--typically but not
 # necessarily sufficiently a name--and may be able to collect statistics about
-# its own existence and its own experience
+# its own existence and experience
+class Agent:
+    def __init__(self, name, policy, feedback=None):
+        self.name = name
+        self.policy = policy
+        self.feedback = feedback
+
+    def __str__(self):
+        return self.name
+
+    # TODO how to reset agent?
+
+
+# TODO scrap the next
+
 class Agent(object):
     def sample_a(self):
         pass

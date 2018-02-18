@@ -67,6 +67,47 @@ class Eligibility(object):
         return self.trace(*args, **kwargs)
 
 
+
+
+
+
+
+
+
+
+class V(value):
+    def value(self, s):
+        raise NotImplementedError
+
+    def confidence(self, s):
+        raise NotImplementedError
+
+    def update_value(self, s, value):
+        raise NotImplementedError
+
+    def update_target(self, s, target):
+        raise NotImplementedError
+
+class A(value):
+    def value(self, a):
+        raise NotImplementedError
+
+    def confidence(self, a):
+        raise NotImplementedError
+
+    def update_value(self, a):
+        raise NotImplementedError
+
+    def update_target(self, a, target):
+        raise NotImplementedError
+
+
+# above is interface;  below are implementations...
+# TODO Actual implementation...
+
+
+
+
 class Values(object):
 
     def __init__(self, vtype):
@@ -178,9 +219,9 @@ class Values(object):
 
     def optim_value_s(self, s, actions, model):
         def value(s0, a):
-            model_dist = model.pr_s1(s0, a)
-            return sum(pr_s1 * (model.E_r(s0, a, s1) + model.gamma * self.value(s1))
-                    for s1, pr_s1 in model_dist.iteritems())
+            dist_s1 = model.s1model.dist_s1(s0, a)
+            return sum(pr_s1 * (model.rmodel.E_r(s0, a, s1) + model.gamma * self.value(s1))
+                    for s1, pr_s1 in dist_s1.items())
         return max(value(s, a) for a in actions)
 
     def optim_value_a(self, actions):
@@ -201,8 +242,8 @@ class Values(object):
 
     def optim_actions_s(self, s, actions, model):
         def value(s0, a):
-            model_dist = model.pr_s1(s0, a)
-            return sum(pr_s1 * (model.E_r(s0, a, s1) + model.gamma * self.value(s1)) for s1, pr_s1 in model_dist.iteritems())
+            dist_s1 = model.s1model.dist_s1(s0, a)
+            return sum(pr_s1 * (model.rmodel.E_r(s0, a, s1) + model.gamma * self.value(s1)) for s1, pr_s1 in dist_s1.items())
 
         return argmax(lambda a: value(s, a), actions, all_=True)
 
@@ -308,6 +349,7 @@ class Values_TabularCounted(Values_Tabular):
             _2logn_div_n = _2logn / n_sa
         except ZeroDivisionError:
             return np.inf
+        print(_2logn_div_n)
         return math.sqrt(_2logn_div_n)
 
     def update_value_sa(self, s, a, value):
@@ -525,9 +567,9 @@ class Values_V2Q(Values_Value2Value):
         self.model = model
 
     def value_sa(self, s0, a):
-        model_dist = self.model.pr_s1(s0, a)
-        return sum(pr_s1 * (self.model.E_r(s0, a, s1) + self.model.gamma * self.ref(s1)) \
-                for s1, pr_s1 in model_dist.iteritems())
+        dist_s1 = self.model.s1model.dist_s1(s0, a)
+        return sum(pr_s1 * (self.model.rmodel.E_r(s0, a, s1) + self.model.gamma * self.ref(s1)) \
+                for s1, pr_s1 in dist_s1.items())
 
 
 class Values_Q2V(Values_Value2Value):
@@ -538,4 +580,4 @@ class Values_Q2V(Values_Value2Value):
     def value_sa(self, s, _):
         actions = self.sys.actions(s)
         policy_dist = self.policy.dist_sa(s, actions)
-        return sum(pr_a * self.ref(s, a) for a, pr_a in policy_dist.iteritems())
+        return sum(pr_a * self.ref(s, a) for a, pr_a in policy_dist.items())
