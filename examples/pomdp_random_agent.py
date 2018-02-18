@@ -42,7 +42,8 @@ if __name__ == '__main__':
     # nodes of the reactive policy........ perhaps use different step sizes?
 
     env = envs.Tiger(.01)
-    env.gamma = .9
+    # env.gamma = .9
+    env.gamma = 1
 
     # Random
     # policy = policies.Random(env)
@@ -105,12 +106,15 @@ if __name__ == '__main__':
     horizon = misc.Horizon(horizon)
     sys = pomdp.System(env, env.model, horizon)
 
-    def run(ri, *, cool=True):
-        print(f'Run {ri} / {nruns};  Running {nepisodes} episodes...')
-        if cool:  # cool factor
-            time.sleep(ri/4)
+    v = mp.RawValue('i', 0)
+    l = mp.Lock()
+    def run(ri):
+        with l:
+            print(f'Starting run {v.value} / {nruns};  Running {nepisodes} episodes...')
+            v.value += 1
         rnd.seed()  # ensure different randomization
 
+        # setting plotting data index
         pplotter.idx = ri * nepisodes
 
         #  reset agent before each new learning run
@@ -124,11 +128,14 @@ if __name__ == '__main__':
     # NOTE parallelized
     with mp.Pool() as pool:
         pool.map(run, range(nruns))
+        # TODO ususally;  a product is returned... in this case.... the product
+        # is.. I should give the sys.run method a function to process the
+        # episodes!!!!  yes!! and then those values are returned..
 
     # NOTE serialized
     # for ri in range(nruns):
     #     # print(f'Run {ri} / {nruns};  Running {nepisodes} episodes...')
-    #     run(ri, cool=False)
+    #     run(ri)
     #     # agent.reset()
     #     # sys.run(agent, nepisodes=nepisodes, callbacks=callbacks)
 
