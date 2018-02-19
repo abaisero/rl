@@ -41,9 +41,14 @@ if __name__ == '__main__':
     # NOTE initially, the nodes of the FSC are much less informative than the
     # nodes of the reactive policy........ perhaps use different step sizes?
 
-    env = envs.Tiger(.01)
+    # env = envs.Tiger(.01)
     # env.gamma = .9
-    env.gamma = 1
+
+    with open('Tiger.pomdp') as f:
+    # with open('Hallway.pomdp') as f:
+    # with open('Hallway2.pomdp') as f:
+    # with open('TagAvoid.pomdp') as f:  # funny;  probabilities don't sum up to one
+        env = envs.parse(f)
 
     # Random
     # policy = policies.Random(env)
@@ -128,16 +133,10 @@ if __name__ == '__main__':
     # NOTE parallelized
     with mp.Pool() as pool:
         pool.map(run, range(nruns))
-        # TODO ususally;  a product is returned... in this case.... the product
-        # is.. I should give the sys.run method a function to process the
-        # episodes!!!!  yes!! and then those values are returned..
 
     # NOTE serialized
     # for ri in range(nruns):
-    #     # print(f'Run {ri} / {nruns};  Running {nepisodes} episodes...')
     #     run(ri)
-    #     # agent.reset()
-    #     # sys.run(agent, nepisodes=nepisodes, callbacks=callbacks)
 
     # np.set_printoptions(precision=2, suppress=True)
 
