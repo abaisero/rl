@@ -6,6 +6,8 @@ import pytk.factory as factory
 import numpy as np
 
 
+### LEXER
+
 tokens = (
     'COLON',
     'ASTERISK',
@@ -42,12 +44,12 @@ t_ASTERISK = r'\*'
 t_PLUS = r'\+'
 t_MINUS = r'-'
 
+
 def t_STRING(t):
     r'[a-zA-Z][a-zA-Z0-9\_\-]*'
     if t.value in reserved:
         t.type = reserved[t.value]
     return t
-
 
 def t_NUMBER(t):
     r'[0-9]*\.?[0-9]+((E|e)(\+|-)?[0-9]+)?'
@@ -84,6 +86,8 @@ def t_error(t):
 
 lex.lex()
 
+
+### PARSER
 
 class POMDP_Parser:
     tokens = tokens
@@ -206,8 +210,8 @@ class POMDP_Parser:
         """ start_state : START COLON RESET """
         raise ValueError('I do not know how to handle the `reset` keyword')
 
-    # REDUCE REDUCE PROBLEM
-
+    # NOTE reduce/reduce conflict solved by enforcing pmatrix contains at least
+    # 2 probabilities
     def p_start_state_1_3(self, p):
         """ start_state : START COLON pmatrix """
         pm = p[3]
@@ -403,6 +407,7 @@ class POMDP_Parser:
         """ number : PLUS number
                    | MINUS number """
         p[0] = p[2] if p[1] == '+' else -p[2]
+
 
 def parse(f, **kwargs):
     p = POMDP_Parser()
