@@ -101,7 +101,8 @@ class POMDP_Parser:
         print('Parsing Error:', p.lineno, p.lexpos, p.type, p.value)
 
     def p_pomdp_file(self, p):
-        """ pomdp_file : preamble start_state param_list """
+        """ pomdp_file : preamble start_state param_list
+                       | preamble             param_list """
 
         s0model = pomdp.State0Distribution(self.env)
         s1model = pomdp.State1Distribution(self.env)
@@ -138,13 +139,13 @@ class POMDP_Parser:
         self.R = np.zeros((env.nactions, env.nstates, env.nstates, env.nobs))
         self.env = env
 
-    def p_preamble_list(self, p):
-        """ preamble_list : preamble_list preamble_item
-                          | preamble_item """
-        try:
-            p[0] = p[1] + [p[2]]
-        except IndexError:
-            p[0] = [p[1]]
+    def p_preamble_list_1(self, p):
+        """ preamble_list : preamble_list preamble_item """
+        p[0] = p[1] + [p[2]]
+
+    def p_preamble_list_2(self, p):
+        """ preamble_list : preamble_item """
+        p[0] = [p[1]]
 
     def p_preamble_item(self, p):
         """ preamble_item : preamble_discount
@@ -163,132 +164,128 @@ class POMDP_Parser:
                            | VALUES COLON COST """
         p[0] = 'value', p[3]
 
-    def p_preamble_state(self, p):
-        """ preamble_state : STATES COLON INT
-                           | STATES COLON name_list """
-        if isinstance(p[3], int):
-            sfactory = factory.FactoryN(p[3])
-        else:
-            sfactory = factory.FactoryValues(p[3])
-        p[0] = 'sfactory', sfactory
+    def p_preamble_state_1(self, p):
+        """ preamble_state : STATES COLON INT """
+        p[0] = 'sfactory', factory.FactoryN(p[3])
 
-    def p_preamble_action(self, p):
-        """ preamble_action : ACTIONS COLON INT
-                            | ACTIONS COLON name_list """
-        if isinstance(p[3], int):
-            afactory = factory.FactoryN(p[3])
-        else:
-            afactory = factory.FactoryValues(p[3])
-        p[0] = 'afactory', afactory
+    def p_preamble_state_2(self, p):
+        """ preamble_state : STATES COLON name_list """
+        p[0] = 'sfactory', factory.FactoryValues(p[3])
 
-    def p_preamble_obs(self, p):
-        """ preamble_obs : OBSERVATIONS COLON INT
-                         | OBSERVATIONS COLON name_list """
-        if isinstance(p[3], int):
-            ofactory = factory.FactoryN(p[3])
-        else:
-            ofactory = factory.FactoryValues(p[3])
-        p[0] = 'ofactory', ofactory
+    def p_preamble_action_1(self, p):
+        """ preamble_action : ACTIONS COLON INT """
+        p[0] = 'afactory', factory.FactoryN(p[3])
 
-    def p_name_list(self, p):
-        """ name_list : name_list STRING
-                      | STRING """
-        try:
-            p[0] = p[1] + [p[2]]
-        except IndexError:
-            p[0] = [p[1]]
+    def p_preamble_action_2(self, p):
+        """ preamble_action : ACTIONS COLON name_list """
+        p[0] = 'afactory', factory.FactoryValues(p[3])
 
-    def p_start_state(self, p):
-        """ start_state : START COLON umatrix
-                        | START COLON STRING
-                        | START INCLUDE COLON start_state_list
-                        | START EXCLUDE COLON start_state_list
-                        | """
-        if len(p) == 4:
-            pr = p[3]
-            if pr == 'uniform':
-                self.S = np.full((self.env.nstates,), 1 / self.env.nstates)
-            elif pr == 'reset':
-                raise ValueError
-            else:
-                self.S = np.array(pr)
-        elif len(p) == 6:
-            s0s = p[4]
-            if p[2] == 'include':
-                self.S = np.zeros((self.env.nstates,))
-                self.S[s0s] = 1 / len(s0s)
-            else:  # exclude
-                self.S = np.full((self.env.nstates,), 1 / (self.env.nstates - len(s0s)))
-                self.S[s0s] = 0
+    def p_preamble_obs_1(self, p):
+        """ preamble_obs : OBSERVATIONS COLON INT """
+        p[0] = 'ofactory', factory.FactoryN(p[3])
 
-    def p_start_state_list(self, p):
-        """ start_state_list : start_state_list state
-                             | state """
-        try:
-            p[0] = p[1] + [p[2]]
-        except IndexError:
-            p[0] = [p[1]]
+    def p_preamble_obs_2(self, p):
+        """ preamble_obs : OBSERVATIONS COLON name_list """
+        p[0] = 'ofactory', factory.FactoryValues(p[3])
 
-    def p_state(self, p):
-        """ state : INT
-                  | STRING
-                  | ASTERISK """
-        if p[1] == '*':
-            p[0] = slice(None)
-        elif isinstance(p[1], int):
-            p[0] = p[1]
-        else:
-            p[0] = self.env.sfactory.i(p[1])
+    def p_name_list_1(self, p):
+        """ name_list : name_list STRING """
+        p[0] = p[1] + [p[2]]
 
-    def p_action(self, p):
-        """ action : INT
-                   | STRING
-                   | ASTERISK """
-        if p[1] == '*':
-            p[0] = slice(None)
-        elif isinstance(p[1], int):
-            p[0] = p[1]
-        else:
-            p[0] = self.env.afactory.i(p[1])
+    def p_name_list_2(self, p):
+        """ name_list : STRING """
+        p[0] = [p[1]]
 
-    def p_obs(self, p):
-        """ obs : INT
-                | STRING
-                | ASTERISK """
-        if p[1] == '*':
-            p[0] = slice(None)
-        elif isinstance(p[1], int):
-            p[0] = p[1]
-        else:
-            p[0] = self.env.ofactory.i(p[1])
+    def p_start_state_1_1(self, p):
+        """ start_state : START COLON UNIFORM """
+        self.S = np.full(self.env.nstates, 1 / self.env.nstates)
 
-    def p_umatrix(self, p):
-        """ umatrix : UNIFORM
-                    | RESET
-                    | pmatrix """
+    def p_start_state_1_2(self, p):
+        """ start_state : START COLON RESET """
+        raise ValueError
+
+    def p_start_state_1_3(self, p):
+        """ start_state : START COLON pmatrix """
+        pm = p[3]
+        self.S = np.array(pm)
+
+    def p_start_state_2(self, p):
+        """ start_state : START COLON state """
+        s = p[3]
+        self.S = np.zeros(self.env.nstates)
+        self.S[s] = 1
+
+    def p_start_state_3(self, p):
+        """ start_state : START INCLUDE COLON start_state_list """
+        slist = p[4]
+        self.S = np.zeros(self.env.nstates)
+        self.S[slist] = 1 / len(slist)
+
+    def p_start_state_4(self, p):
+        """ start_state : START EXCLUDE COLON start_state_list """
+        slist = p[4]
+        self.S = np.full(self.env.nstates, 1 / (self.env.nstates - len(slist)))
+        self.S[s0s] = 0
+
+    def p_start_state_list_1(self, p):
+        """ start_state_list : start_state_list state """
+        p[0] = p[1] + [p[2]]
+
+    def p_start_state_list_2(self, p):
+        """ start_state_list : state """
+        p[0] = [p[1]]
+
+    def p_state_1(self, p):
+        """ state : INT """
         p[0] = p[1]
 
-    def p_uimatrix(self, p):
-        """ uimatrix : UNIFORM
-                     | IDENTITY
-                     | pmatrix """
+    def p_state_2(self, p):
+        """ state : STRING """
+        p[0] = self.env.sfactory.i(p[1])
+
+    def p_state_3(self, p):
+        """ state : ASTERISK """
+        p[0] = slice(None)
+
+    def p_action_1(self, p):
+        """ action : INT """
         p[0] = p[1]
 
-    def p_pmatrix(self, p):
-        """ pmatrix : pmatrix prob
-                    | prob """
-        try:
-            p[0] = p[1] + [p[2]]
-        except IndexError:
-            p[0] = [p[1]]
+    def p_action_2(self, p):
+        """ action : STRING """
+        p[0] = self.env.afactory.i(p[1])
+
+    def p_action_3(self, p):
+        """ action : ASTERISK """
+        p[0] = slice(None)
+
+    def p_obs_1(self, p):
+        """ obs : INT """
+        p[0] = p[1]
+
+    def p_obs_2(self, p):
+        """ obs : STRING """
+        p[0] = self.env.ofactory.i(p[1])
+
+    def p_obs_3(self, p):
+        """ obs : ASTERISK """
+        p[0] = slice(None)
+
+    def p_pmatrix_1(self, p):
+        """ pmatrix : pmatrix prob """
+        p[0] = p[1] + [p[2]]
+
+    def p_pmatrix_2(self, p):
+        """ pmatrix : prob """
+        p[0] = [p[1]]
+
+    def p_nmatrix_1(self, p):
+        """ nmatrix : nmatrix number """
+        p[0] = p[1] + [p[2]]
 
     def p_nmatrix(self, p):
-        """ nmatrix : nmatrix number
-                    | number """
-        try:
-            p[0] = p[1] + [p[2]]
-        except IndexError:
-            p[0] = [p[1]]
+        """ nmatrix : number """
+        p[0] = [p[1]]
 
     def p_param_list(self, p):
         """ param_list : param_list t_spec
@@ -297,83 +294,90 @@ class POMDP_Parser:
                        | """
         pass
 
-    def p_t_spec(self, p):
-        """ t_spec : T COLON action COLON state COLON state prob
-                   | T COLON action COLON state umatrix
-                   | T COLON action uimatrix """
-        # TODO it's not so nice that I have to check length stuff here...
-        a = p[3]
-        if len(p) == 9:
-            s0 = p[5]
-            s1 = p[7]
-            pr = p[8]
-            self.T[a, s0, s1] = pr
-        elif len(p) == 7:
-            s0 = p[5]
-            pr = p[6]
-            if pr == 'uniform':
-                self.T[a, s0] = 1 / self.env.nstates
-            elif pr == 'reset':
-                raise ValueError
-            else:
-                self.T[a, s0] = pr
-        else:
-            pr = p[4]
-            if pr == 'uniform':
-                self.T[a] = 1 / self.env.nstates
-            elif pr == 'identity':
-                self.T[a] = np.eye(self.env.nstates)
-            else:
-                self.T[a] = np.reshape(pr, self.T[a].shape)
+    def p_t_spec_1(self, p):
+        """ t_spec : T COLON action COLON state COLON state prob """
+        a, s0, s1, pm = p[3], p[5], p[7], p[8]
+        self.T[a, s0, s1] = pm
 
-    def p_o_spec(self, p):
-        """ o_spec : O COLON action COLON state COLON obs prob
-                   | O COLON action COLON state umatrix
-                   | O COLON action umatrix """
+    def p_t_spec_2_1(self, p):
+        """ t_spec : T COLON action COLON state UNIFORM """
+        a, s0 = p[3], p[4]
+        self.T[a, s0] = 1 / self.env.nstates
+
+    def p_t_spec_2_2(self, p):
+        """ t_spec : T COLON action COLON state RESET """
+        raise ValueError
+
+    def p_t_spec_2_3(self, p):
+        """ t_spec : T COLON action COLON state pmatrix """
+        a, s0, pm = p[3], p[4], p[6]
+        self.T[a, s0] = pm
+
+    def p_t_spec_3_1(self, p):
+        """ t_spec : T COLON action UNIFORM """
         a = p[3]
-        if len(p) == 9:
-            s1 = p[5]
-            o = p[7]
-            pr = p[8]
-            self.O[a, s1, o] = pr
-        elif len(p) == 7:
-            s1 = p[5]
-            pr = p[6]
-            if pr == 'uniform':
-                self.O[a, s1] = 1 / self.env.nobs
-            elif pr == 'reset':
-                raise ValueError
-            else:
-                self.O[a, s1] = pr
-        else:
-            pr = p[4]
-            if pr == 'uniform':
-                self.O[a] = 1 / self.env.nstates
-            elif pr == 'reset':
-                raise ValueError
-            else:
-                self.O[a] = np.reshape(pr, self.O[a].shape)
+        self.T[a] = 1 / self.env.nstates
+
+    def p_t_spec_3_2(self, p):
+        """ t_spec : T COLON action IDENTITY """
+        a = p[3]
+        self.T[a] = np.eye(self.env.nstates)
+
+    def p_t_spec_3_3(self, p):
+        """ t_spec : T COLON action pmatrix """
+        a, pm = p[3], p[4]
+        self.T[a] = np.reshape(pm, (self.env.nstates, self.env.nstates))
+
+    def p_o_spec_1(self, p):
+        """ o_spec : O COLON action COLON state COLON obs prob """
+        a, s1, o, pr = p[3], p[5], p[7], p[8]
+        self.O[a, s1, o] = pr
+
+    def p_o_spec_2_1(self, p):
+        """ o_spec : O COLON action COLON state UNIFORM """
+        a, s1 = p[3], p[5]
+        self.O[a, s1] = 1 / self.env.nobs
+
+    def p_o_spec_2_2(self, p):
+        """ o_spec : O COLON action COLON state RESET """
+        raise ValueError
+
+    def p_o_spec_2_3(self, p):
+        """ o_spec : O COLON action COLON state pmatrix """
+        a, s1, pm = p[3], p[5], p[6]
+        self.O[a, s1] = pm
+
+    def p_o_spec_3_1(self, p):
+        """ o_spec : O COLON action UNIFORM """
+        a = p[3]
+        self.O[a] = 1 / self.env.nobs
+
+    def p_o_spec_3_2(self, p):
+        """ o_spec : O COLON action RESET """
+        raise ValueError
+
+    def p_o_spec_3_3(self, p):
+        """ o_spec : O COLON action pmatrix """
+        a, pm = p[3], p[4]
+        self.O[a] = np.reshape(pm, (self.env.nstates, self.env.nobs))
 
     # TODO I could improve this considerably... if I were to not collect
     # nmatrix data in a list... but write to matrix directly!
 
-    def p_r_spec(self, p):
-        """ r_spec : R COLON action COLON state COLON state COLON obs number
-                   | R COLON action COLON state COLON state nmatrix
-                   | R COLON action COLON state nmatrix """
-        a = p[3]
-        s0 = p[5]
-        if len(p) == 11:
-            s1 = p[7]
-            o = p[9]
-            r = p[10]
-            self.R[a, s0, s1, o] = r
-        elif len(p) == 9:
-            s1 = p[7]
-            r = p[8]
-            self.R[a, s0, s1] = r
-        else:
-            self.R[a, s0] = r
+    def p_r_spec_1(self, p):
+        """ r_spec : R COLON action COLON state COLON state COLON obs number """
+        a, s0, s1, o, r = p[3], p[5], p[7], p[9], p[10]
+        self.R[a, s0, s1, o] = r
+
+    def p_r_spec_2(self, p):
+        """ r_spec : R COLON action COLON state COLON state nmatrix """
+        a, s0, s1, r = p[3], p[5], p[7], p[8]
+        self.R[a, s0, s1] = r
+
+    def p_r_spec_3(self, p):
+        """ r_spec : R COLON action COLON state nmatrix """
+        a, s0 = p[3], p[5]
+        self.R[a, s0] = r
 
     def p_prob(self, p):
         """ prob : FLOAT
@@ -383,19 +387,16 @@ class POMDP_Parser:
     def p_number(self, p):
         """ number : optional_sign FLOAT
                    | optional_sign INT """
-        if p[1] == '+':
-            p[0] = p[2]
-        else:
-            p[0] = -p[2]
+        p[0] = p[1](p[2])
 
-    def p_optional_sign(self, p):
+    def p_optional_sign_1(self, p):
         """ optional_sign : PLUS
-                          | MINUS
                           | """
-        if len(p) > 1 and p[1] == '-':
-            p[0] = '-'
-        else:
-            p[0] = '+'
+        p[0] = lambda n: n
+
+    def p_optional_sign_2(self, p):
+        """ optional_sign : MINUS """
+        p[0] = lambda n: -n
 
 
 def parse(f):
