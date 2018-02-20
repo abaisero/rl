@@ -162,6 +162,8 @@ class POMDP_Parser:
     def p_preamble_value(self, p):
         """ preamble_value : VALUES COLON REWARD
                            | VALUES COLON COST """
+        if p[3] == 'cost':
+            raise ValueError('I do not know how to handle the `cost` keyword')
         p[0] = 'value', p[3]
 
     def p_preamble_state_1(self, p):
@@ -202,7 +204,9 @@ class POMDP_Parser:
 
     def p_start_state_1_2(self, p):
         """ start_state : START COLON RESET """
-        raise ValueError
+        raise ValueError('I do not know how to handle the `reset` keyword')
+
+    # REDUCE REDUCE PROBLEM
 
     def p_start_state_1_3(self, p):
         """ start_state : START COLON pmatrix """
@@ -275,9 +279,15 @@ class POMDP_Parser:
         """ pmatrix : pmatrix prob """
         p[0] = p[1] + [p[2]]
 
+    # NOTE enforce at least two probabilities;
+    # solves reduce/reduce conflict in start_state rule!
     def p_pmatrix_2(self, p):
-        """ pmatrix : prob """
-        p[0] = [p[1]]
+        """ pmatrix : prob prob """
+        p[0] = [p[1], p[2]]
+
+    # def p_pmatrix_2(self, p):
+    #     """ pmatrix : prob """
+    #     p[0] = [p[1]]
 
     def p_nmatrix_1(self, p):
         """ nmatrix : nmatrix number """
@@ -306,7 +316,7 @@ class POMDP_Parser:
 
     def p_t_spec_2_2(self, p):
         """ t_spec : T COLON action COLON state RESET """
-        raise ValueError
+        raise ValueError('I do not know how to handle the `reset` keyword')
 
     def p_t_spec_2_3(self, p):
         """ t_spec : T COLON action COLON state pmatrix """
@@ -340,7 +350,7 @@ class POMDP_Parser:
 
     def p_o_spec_2_2(self, p):
         """ o_spec : O COLON action COLON state RESET """
-        raise ValueError
+        raise ValueError('I do not know how to handle the `reset` keyword')
 
     def p_o_spec_2_3(self, p):
         """ o_spec : O COLON action COLON state pmatrix """
@@ -354,7 +364,7 @@ class POMDP_Parser:
 
     def p_o_spec_3_2(self, p):
         """ o_spec : O COLON action RESET """
-        raise ValueError
+        raise ValueError('I do not know how to handle the `reset` keyword')
 
     def p_o_spec_3_3(self, p):
         """ o_spec : O COLON action pmatrix """
@@ -384,23 +394,18 @@ class POMDP_Parser:
                  | INT """
         p[0] = p[1]
 
-    def p_number(self, p):
-        """ number : optional_sign FLOAT
-                   | optional_sign INT """
-        p[0] = p[1](p[2])
+    def p_number_1(self, p):
+        """ number : FLOAT
+                   | INT """
+        p[0] = p[1]
 
-    def p_optional_sign_1(self, p):
-        """ optional_sign : PLUS
-                          | """
-        p[0] = lambda n: n
+    def p_number_2(self, p):
+        """ number : PLUS number
+                   | MINUS number """
+        p[0] = p[2] if p[1] == '+' else -p[2]
 
-    def p_optional_sign_2(self, p):
-        """ optional_sign : MINUS """
-        p[0] = lambda n: -n
-
-
-def parse(f):
+def parse(f, **kwargs):
     p = POMDP_Parser()
     y = yacc.yacc(module=p)
-    y.parse(f.read())
+    y.parse(f.read(), **kwargs)
     return p.env
