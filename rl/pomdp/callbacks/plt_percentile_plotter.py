@@ -98,10 +98,6 @@ class PLT_PercentilePlotter(Callback):
 
         #  initialize plot
         ax = plt.subplot()
-        try:
-            plt_init()
-        except TypeError:
-            pass
 
         #  wait until new consumable becomes available
         for idx, d in iter(q.get, None):
@@ -116,13 +112,19 @@ class PLT_PercentilePlotter(Callback):
 
             #  (update) plot
             nanpercentiles = np.nanpercentile(data, percentiles, axis=0)
-            for p, pdata in zip(percentiles, nanpercentiles):
-                try:
+            try:
+                for p, pdata in zip(percentiles, nanpercentiles):
                     ldict[p].set_ydata(pdata)
-                except KeyError:
+            except KeyError:
+                for p, pdata in zip(percentiles, nanpercentiles):
                     ldict[p], = ax.plot(pdata, **pdict[p])
 
-            ax.relim()
-            ax.autoscale_view()
-            # plt.draw()  #  redundant by plt.pause
-            plt.pause(1e-10)
+                try:
+                    plt_init()
+                except TypeError:
+                    pass
+            else:
+                ax.relim()
+                ax.autoscale_view()
+                # plt.draw()  #  redundant by plt.pause
+                plt.pause(1e-10)
