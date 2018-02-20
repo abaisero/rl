@@ -7,46 +7,38 @@ from .agent import Agent
 class IsGPOMDP(Agent):
     logger = logging.getLogger(f'{__name__}.IsGPOMDP')
 
+    def __init__(self, name, env, policy, beta):
+        super().__init__(name, env, policy)
+        self.beta = beta
+
     def reset(self):
         self.policy.reset()
-        self.restart()
 
     def restart(self):
         self.policy.restart()
-        self.ihistory = []
+
+        self.za = 0
+        self.da = 0
+        self.zo = 0
+        self.do = 0
 
     def feedback(self, sys, context, a, feedback):
         self.logger.debug(f'feedback() \t; {context} \t; a={a} \t; {feedback}')
 
-        o = feedback.o
+        t = context.t
+        o, r = feedback.o, feedback.r
+        n = self.policy.context.n
+        n1 = self.policy.feedback(o).n1
 
-        icontext = self.policy.context
-        ifeedback = self.policy.feedback(o)
-        self.ihistory.append((icontext, ifeedback))
+        self.za = self.beta * self.za + self.policy.amodel.dlogprobs(n, a)
+        self.da += (r * self.za - self.da) / (t+1)
+
+        self.zo = self.beta * self.zo + self.policy.omodel.dlogprobs(n, o, n1)
+        self.do += (r * self.zo - self.do) / (t+1)
 
     def feedback_episode(self, sys, episode):
         self.logger.debug(f'feedback_episode() \t; len(episode)={len(episode)}')
 
-        G = 0.
-
-        history = zip(reversed(episode), reversed(self.ihistory))
-        for (context, a, feedback), (icontext, ifeedback) in history:
-            t = context.t
-            o, r = feedback.o, feedback.r
-            n = icontext.n
-            n1 = ifeedback.n1
-
-            G = r + self.env.gamma * G
-
-            # TODO let some other method take care of how to do the gradient descent (normalized or not, etc...)
-            alpha = .001
-
-            daparams = self.policy.amodel.dlogprobs(n, a)
-            # daparams /= np.sqrt((daparams * daparams).sum())
-            self.policy.amodel.params += alpha * G * daparams
-            # self.policy.amodel.params += alpha * (self.env.gamma ** t ) * G * daparams
-
-            doparams = self.policy.omodel.dlogprobs(n, o, n1)
-            # doparams /= np.sqrt((doparams * doparams).sum())
-            self.policy.omodel.params += alpha * G * doparams
-            # self.policy.omodel.params += alpha * (self.env.gamma ** t) * G * doparams
+        alpha = 1
+        self.policy.amodel.params += alpha * self.da
+        self.policy.omodel.params += alpha * self.do

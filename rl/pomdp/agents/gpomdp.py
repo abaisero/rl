@@ -9,40 +9,31 @@ import numpy as np
 class GPOMDP(Agent):
     logger = logging.getLogger(f'{__name__}.GPOMDP')
 
+    def __init__(self, name, env, policy, beta):
+        super().__init__(name, env, policy)
+        self.beta = beta
+
     def reset(self):
         self.policy.reset()
-        self.restart()
 
     def restart(self):
         self.policy.restart()
-        self.ihistory = []
+
+        self.z = 0
+        self.d = 0
 
     def feedback(self, sys, context, a, feedback):
         self.logger.debug(f'feedback() \t; {context} \t; a={a} \t; {feedback}')
 
-        o = feedback.o
+        t = context.t
+        o = self.policy.context.o
+        r = feedback.r
 
-        icontext = self.policy.context
-        ifeedback = self.policy.feedback(o)
-        self.ihistory.append((icontext, ifeedback))
+        self.z = self.beta * self.z + self.policy.amodel.dlogprobs(o, a)
+        self.d += (r * self.z - self.d) / (t+1)
 
-    # TODO implement step-variant!
     def feedback_episode(self, sys, episode):
         self.logger.debug(f'feedback_episode() \t; len(episode)={len(episode)}')
 
-        G = 0.
-
-        history = zip(reversed(episode), reversed(self.ihistory))
-        for (context, a, feedback), (icontext, ifeedback) in history:
-            t = context.t
-            r = feedback.r
-            o = icontext.o
-
-            G = r + self.env.gamma * G
-
-            # TODO let some other method take care of how to do the gradient descent (normalized or not, etc...)
-            alpha = .001
-            dparams = self.policy.amodel.dlogprobs(o, a)
-            # dparams /= np.sqrt((dparams * dparams).sum())
-            self.policy.amodel.params += alpha * G * dparams
-            # self.policy.amodel.params += alpha * (self.env.gamma ** t ) * G * dparams
+        alpha = 1
+        self.policy.amodel.params += alpha * self.d
