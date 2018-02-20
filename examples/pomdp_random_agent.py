@@ -41,15 +41,25 @@ if __name__ == '__main__':
     # NOTE initially, the nodes of the FSC are much less informative than the
     # nodes of the reactive policy........ perhaps use different step sizes?
 
-    # pomdp_fname = 'Tiger.pomdp'
-    pomdp_fname = 'loadunload.POMDP'
-    # pomdp_fname = 'heaven-hell.POMDP'
-    # pomdp_fname = 'Hallway.pomdp'
-    # pomdp_fname = 'Hallway2.pomdp'
-    # pomdp_fname = 'TagAvoid.pomdp'  # funny;  probabilities don't sum up to 1
+    # # pomdp_fname = 'Tiger.pomdp'
+    # pomdp_fname = 'loadunload.POMDP'
+    # # pomdp_fname = 'heaven-hell.POMDP'
+    # # pomdp_fname = 'Hallway.pomdp'
+    # # pomdp_fname = 'Hallway2.pomdp'
+    # # pomdp_fname = 'TagAvoid.pomdp'  # funny;  probabilities don't sum up to 1
 
-    with open(pomdp_fname) as f:
+    envname = 'Tiger'
+    # envname = 'loadunload'
+    # envname = 'heaven-hell'
+    # envname = 'Hallway'
+    # envname = 'Hallway2'
+    # envname = 'TagAvoid'  # funny;  probabilities don't sum up to 1
+    with envs.dotpomdp(envname) as f:
+    # with open(pomdp_fname) as f:
         env = envs.parse(f)
+
+    # with pomdp.f('loadunload') as f:
+    #     pass
 
     # env = envs.Tiger(.15)
     # env.gamma = .95

@@ -2,7 +2,7 @@
 # encoding: utf-8
 
 import os
-from setuptools import setup
+from setuptools import setup, find_packages
 
 
 def read(fname):
@@ -12,15 +12,20 @@ def read(fname):
 
 setup(
     name='rl',
+    version='0.0.1',
     description='rl - reinforcement learning code and programming exercises from Sutton and Barto',
     # long_description=read('README.rst'),
     author='Andrea Baisero',
-    url='https://github.com/bigblindbais/rl',
-    download_url='https://github.com/bigblindbais/rl',
     author_email='andrea.baisero@gmail.com',
-    version='0.0.1',
-    install_requires=['numpy', 'scipy'],  #  GPy, pytk
+    url='https://github.com/bigblindbais/rl',
+
     packages=['rl'],
+    package_dir={'':'src'},
+
+    package_data={'rl': ['data/pomdps/*.pomdp']},
+    include_package_data=True,
+
+    install_requires=['numpy', 'scipy'],  #  GPy, pytk
     license='MIT',
     test_suite='tests',
 )
