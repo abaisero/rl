@@ -319,7 +319,7 @@ class POMDP_Parser:
 
     def p_t_spec_2_1(self, p):
         """ t_spec : T COLON action COLON state UNIFORM """
-        a, s0 = p[3], p[4]
+        a, s0 = p[3], p[5]
         self.T[a, s0] = 1 / self.env.nstates
 
     def p_t_spec_2_2(self, p):
@@ -328,7 +328,7 @@ class POMDP_Parser:
 
     def p_t_spec_2_3(self, p):
         """ t_spec : T COLON action COLON state pmatrix """
-        a, s0, pm = p[3], p[4], p[6]
+        a, s0, pm = p[3], p[5], p[6]
         self.T[a, s0] = pm
 
     def p_t_spec_3_1(self, p):
