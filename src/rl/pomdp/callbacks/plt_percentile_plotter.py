@@ -91,13 +91,14 @@ class PLT_PercentilePlotter(Callback):
 
     @staticmethod
     def target(q, shape, pdict, plt_init=None):
+        ax_pp = plt.subplot(211)
+        ax_rp = plt.subplot(212, sharex=ax_pp, sharey=ax_pp)
+
         #  initialize data and plot variables
         data = np.full(shape, np.nan)
         percentiles = list(pdict)
-        ldict = dict()
-
-        #  initialize plot
-        ax = plt.subplot()
+        pp_ldict = dict()
+        rp_lines = ax_rp.plot(data.T, linewidth=1)
 
         #  wait until new consumable becomes available
         for idx, d in iter(q.get, None):
@@ -112,19 +113,30 @@ class PLT_PercentilePlotter(Callback):
 
             #  (update) plot
             nanpercentiles = np.nanpercentile(data, percentiles, axis=0)
+            # TODO maybe use list (like rp) instead of ldist
             try:
                 for p, pdata in zip(percentiles, nanpercentiles):
-                    ldict[p].set_ydata(pdata)
+                    pp_ldict[p].set_ydata(pdata)
             except KeyError:
                 for p, pdata in zip(percentiles, nanpercentiles):
-                    ldict[p], = ax.plot(pdata, **pdict[p])
+                    pp_ldict[p], = ax_pp.plot(pdata, **pdict[p])
 
                 try:
+                    plt.sca(ax_pp)
                     plt_init()
                 except TypeError:
                     pass
             else:
-                ax.relim()
-                ax.autoscale_view()
-                # plt.draw()  #  redundant by plt.pause
-                plt.pause(1e-10)
+                ax_pp.relim()
+                ax_pp.autoscale_view()
+
+            #  (update) radar plot
+            anynan = np.isnan(data).any(axis=1)
+            for l, d, an in zip(rp_lines, data, anynan):
+                if an:
+                    l.set_ydata(d)
+                elif l.axes is not None:
+                    l.remove()
+
+            # plt.draw()  #  redundant by plt.pause
+            plt.pause(1e-10)
