@@ -9,6 +9,8 @@ import numpy as np
 class Blind(Agent):
     logger = logging.getLogger(f'{__name__}.Blind')
 
+    # TODO this should also be implemented using pgradient stuff!!
+
     # TODO implement step-variant!
     def feedback_episode(self, sys, episode):
         self.logger.debug(f'feedback_episode() \t; len(episode)={len(episode)}')

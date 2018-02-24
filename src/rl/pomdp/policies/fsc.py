@@ -4,6 +4,7 @@ import pytk.factory as factory
 import pytk.factory.model as fmodel
 
 from collections import namedtuple
+import numpy as np
 
 
 IContext = namedtuple('IContext', 'n')
@@ -20,6 +21,20 @@ class FSC(Policy):
 
         self.amodel = fmodel.Softmax(env.afactory, cond=(self.nfactory,))
         self.omodel = fmodel.Softmax(self.nfactory, cond=(self.nfactory, env.ofactory))
+        # TODO look at pgradient;  this won't work for some reason
+        # self.params = np.array([self.amodel.params, self.omodel.params])
+
+    @property
+    def params(self):
+        params = np.empty(2, dtype=object)
+        params[:] = self.amodel.params, self.omodel.params
+        return params
+
+    @params.setter
+    def params(self, value):
+        aparams, oparams = value
+        self.amodel.params = aparams
+        self.omodel.params = oparams
 
     def reset(self):
         self.amodel.reset()
@@ -40,7 +55,10 @@ class FSC(Policy):
     def context(self):
         return IContext(self.n)
 
-    def feedback(self, o):
+    def feedback(self, feedback):
+        return self.feedback_o(feedback.o)
+
+    def feedback_o(self, o):
         self.n = self.omodel.sample(self.n, o)
         return IFeedback(n1=self.n)
 

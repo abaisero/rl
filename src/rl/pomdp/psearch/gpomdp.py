@@ -1,24 +1,21 @@
 import logging
 logger = logging.getLogger(__name__)
 
-from .agent import Agent
+from .p import P
 
 import numpy as np
 
 
-class GPOMDP(Agent):
+class GPOMDP(P):
+    """ "Infinite-Horizon Policy-Gradient Estimation" - J. Baxter, P.Bartlett """
+
     logger = logging.getLogger(f'{__name__}.GPOMDP')
 
-    def __init__(self, name, env, policy, beta):
-        super().__init__(name, env, policy)
+    def __init__(self, policy, beta):
+        super().__init__(policy)
         self.beta = beta
 
-    def reset(self):
-        self.policy.reset()
-
     def restart(self):
-        self.policy.restart()
-
         self.z = 0
         self.d = 0
 
@@ -35,5 +32,4 @@ class GPOMDP(Agent):
     def feedback_episode(self, sys, episode):
         self.logger.debug(f'feedback_episode() \t; len(episode)={len(episode)}')
 
-        alpha = 1
-        self.policy.amodel.params += alpha * self.d
+        return self.d

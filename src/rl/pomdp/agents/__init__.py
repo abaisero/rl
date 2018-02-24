@@ -1,4 +1,4 @@
 from .agent import Agent
-from .blind import Blind
-from .gpomdp import GPOMDP
-from .isgpomdp import IsGPOMDP
+# from .blind import Blind
+from .pgradient import PolicyGradient
+from .psearch import PolicySearch

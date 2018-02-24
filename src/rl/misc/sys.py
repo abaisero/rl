@@ -74,40 +74,5 @@ class System:
             agent.feedback_episode(self, episode)
             for cb in callbacks:
                 cb.feedback_episode(self, episode)
-            for fb in feedbacks_episode:
-                fb(self, episode)
-
-    # def multiruns(self, agent, nruns=1, nepisodes=1, *, callbacks=None):
-    #     if callbacks is None:
-    #         callbacks = tuple()
-
-    #     # TODO possibly specify new horizon object here...
-    #     for nr in range(nruns):
-    #         agent.reset()
-    #         for ne in range(nepisodes):
-    #             logger.info(f'Episode {ne} begins')
-
-    #             self.restart()
-    #             agent.restart()
-
-    #             episode = []
-
-    #             self.t = 0
-    #             while not self.done:
-    #                 context = self.context
-    #                 a = agent.act(context)
-    #                 feedback = self.step(a)
-
-    #                 logger.info(f'e={ne} \t; t={self.t} \t; s={self.s} \t; {context} \t; a={a} \t; {feedback}')
-
-    #                 episode.append((context, a, feedback))
-
-    #                 self.t += 1
-
-    #                 agent.feedback(self, context, a, feedback)
-    #                 for cb in callbacks:
-    #                     cb.feedback(self, context, a, feedback)
-
-    #             agent.feedback_episode(self, episode)
-    #             for cb in callbacks:
-    #                 cb.feedback_episode(self, episode)
+            for fbe in feedbacks_episode:
+                fbe(self, episode)

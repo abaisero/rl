@@ -29,9 +29,9 @@ LOGGING = {
     },
 
     'loggers': {
-        'rl.pomdp': {
+        'rl.pomdp.agents.pgradient': {
             'handlers': ['file'],
-            'level': 'DEBUG',
+            'level': 'INFO',
             'propagate': True,
         },
     },
