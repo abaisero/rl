@@ -3,7 +3,6 @@ import rl.pomdp.envs as envs
 import rl.pomdp.policies as policies
 import rl.pomdp.psearch as psearch
 import rl.pomdp.agents as agents
-import rl.pomdp.callbacks as cbacks
 import rl.optim as optim
 import rl.graph as graph
 import rl.misc as misc
@@ -48,6 +47,7 @@ if __name__ == '__main__':
     N = 5
     beta = .95
     step_size = optim.StepSize(.1)
+    # step_size = optim.StepSize(1)
     # step_size = optim.Geometric(10, .99)
     eps = 1e-10
     parall = False
@@ -67,10 +67,10 @@ if __name__ == '__main__':
     # agent = agents.Blind('Blind', env, policy)
 
     # GPOMDP
-    policy = policies.Reactive(env)
-    pg = psearch.GPOMDP(policy, beta)
-    name = f'GPOMDP ($\\beta$={beta})'
-    agent = agents.PolicyGradient(name, env, policy, pg, step_size=step_size)
+    # policy = policies.Reactive(env)
+    # pg = psearch.GPOMDP(policy, beta)
+    # name = f'GPOMDP ($\\beta$={beta})'
+    # agent = agents.PolicyGradient(name, env, policy, pg, step_size=step_size)
 
     # CONJGPOMDP + GPOMDP
     # policy = policies.Reactive(env)
@@ -80,10 +80,10 @@ if __name__ == '__main__':
     # agent = agents.PolicySearch(name, env, policy, ps)
 
     # Istate-GPOMDP (params N and beta)
-    # policy = policies.FSC(env, N)
-    # pg = psearch.IsGPOMDP(policy, beta)
-    # name = f'IsGPOMDP (N={N}, $\\beta$={beta})'
-    # agent = agents.PolicyGradient(name, env, policy, pg, step_size=step_size)
+    policy = policies.FSC(env, N)
+    pg = psearch.IsGPOMDP(policy, beta)
+    name = f'IsGPOMDP (N={N}, $\\beta$={beta})'
+    agent = agents.PolicyGradient(name, env, policy, pg, step_size=step_size)
 
     # CONJGPOMDP + Istate-GPOMDP
     # policy = policies.FSC(env, N)
@@ -105,11 +105,11 @@ if __name__ == '__main__':
         pdict_item(  0, pen=dict(color='r', style=QtCore.Qt.DotLine)),
     ])
 
-    q_returns, _ = graph.plot(shape, pdict,
+    q_returns, _ = graph.pplot(shape, pdict,
         window=dict(text='Returns', size='16pt', bold=True),
         labels=dict(left='G_t', bottom='Episode'),
     )
-    q_gnorms, _ = graph.plot(shape, pdict,
+    q_gnorms, _ = graph.pplot(shape, pdict,
         window=dict(text='Gradient Norms', size='16pt', bold=True),
         labels=dict(left='|w|', bottom='Episode'),
         # ranges=dict(y=[0, None]),
@@ -144,6 +144,8 @@ if __name__ == '__main__':
         feedbacks = ()
         feedbacks_episode = episode_return,
 
+        # TODO I can still print the different between parameters!!!!
+        # YES this is correct..
         def episode_gnorm(gradient):
             nonlocal idx_gnorms
             if gradient.dtype == object:

@@ -102,7 +102,7 @@ def process_target(shape, q, pdict, **kwargs):
     QtGui.QApplication.instance().exec_()
 
 
-def plot(shape, pdict, **kwargs):
+def pplot(shape, pdict, **kwargs):
     q = mp.Queue()
     p = mp.Process(target=process_target, args=(shape, q, pdict), kwargs=kwargs)
     p.daemon = True

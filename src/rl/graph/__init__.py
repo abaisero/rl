@@ -1,1 +1,1 @@
-from .plotter import plot
+from .percentile_plotter import pplot
