@@ -5,11 +5,10 @@ import rl.pomdp.psearch as psearch
 import rl.pomdp.agents as agents
 import rl.pomdp.callbacks as cbacks
 import rl.optim as optim
+import rl.graph as graph
 import rl.misc as misc
 
-# import rl.values as value
-# import rl.values.v as v
-# import rl.values.q as q
+from pytk.callbacks import Callback
 
 import numpy as np
 import numpy.random as rnd
@@ -17,6 +16,7 @@ import numpy.random as rnd
 import logging.config
 from logconfig import LOGGING
 
+import matplotlib.pyplot as plt
 import seaborn as sns
 sns.set_style('darkgrid')
 
@@ -30,8 +30,8 @@ if __name__ == '__main__':
     # logging configuration
     logging.config.dictConfig(LOGGING)
 
-    # nruns, nepisodes, horizon = 100, 10000, 100
-    nruns, nepisodes, horizon = 100, 10000, 100
+    nruns, nepisodes, horizon = 100, 1000, 100
+    shape = nruns, nepisodes
 
     envname = 'Tiger'
     # envname = 'loadunload'
@@ -39,11 +39,11 @@ if __name__ == '__main__':
     # envname = 'Hallway'
     # envname = 'Hallway2'
     # envname = 'TagAvoid'  # funny;  probabilities don't sum up to 1
-    # with envs.dotpomdp(envname) as f:
-    #     env = envs.parse(f)
+    with envs.dotpomdp(envname) as f:
+        env = envs.parse(f)
 
-    env = envs.Tiger(.01)
-    env.gamma = .95
+    # env = envs.Tiger(.01)
+    # env.gamma = .95
 
     N = 5
     beta = .95
@@ -67,10 +67,10 @@ if __name__ == '__main__':
     # agent = agents.Blind('Blind', env, policy)
 
     # GPOMDP
-    # policy = policies.Reactive(env)
-    # pg = psearch.GPOMDP(policy, beta)
-    # name = f'GPOMDP ($\\beta$={beta})'
-    # agent = agents.PolicyGradient(name, env, policy, pg, step_size=step_size)
+    policy = policies.Reactive(env)
+    pg = psearch.GPOMDP(policy, beta)
+    name = f'GPOMDP ($\\beta$={beta})'
+    agent = agents.PolicyGradient(name, env, policy, pg, step_size=step_size)
 
     # CONJGPOMDP + GPOMDP
     # policy = policies.Reactive(env)
@@ -80,10 +80,10 @@ if __name__ == '__main__':
     # agent = agents.PolicySearch(name, env, policy, ps)
 
     # Istate-GPOMDP (params N and beta)
-    policy = policies.FSC(env, N)
-    pg = psearch.IsGPOMDP(policy, beta)
-    name = f'IsGPOMDP (N={N}, $\\beta$={beta})'
-    agent = agents.PolicyGradient(name, env, policy, pg, step_size=step_size)
+    # policy = policies.FSC(env, N)
+    # pg = psearch.IsGPOMDP(policy, beta)
+    # name = f'IsGPOMDP (N={N}, $\\beta$={beta})'
+    # agent = agents.PolicyGradient(name, env, policy, pg, step_size=step_size)
 
     # CONJGPOMDP + Istate-GPOMDP
     # policy = policies.FSC(env, N)
@@ -92,36 +92,30 @@ if __name__ == '__main__':
     # name = f'CONJPOMDP-IsGPOMDP (N={N}, $\\beta$={beta}, $\\epsilon$={eps})'
     # agent = agents.PolicySearch(name, env, policy, ps)
 
-    def pdict_item(p, **kwargs):
-        return p, dict(label=f'{p/100:.2f}', **kwargs)
+    def pdict_item(percentile, **kwargs):
+        return percentile, dict(name=f'{percentile/100:.2f}', **kwargs)
+
+    from pyqtgraph.Qt import QtCore
 
     pdict = dict([
-        pdict_item(100, c='green', linestyle='dashed', linewidth=1),
-        pdict_item( 75, c='green', linewidth=1),
-        pdict_item( 50, c='black'),
-        pdict_item( 25, c='red', linewidth=1),
-        pdict_item(  0, c='red', linestyle='dashed', linewidth=1),
+        pdict_item(100, pen=dict(color='g', style=QtCore.Qt.DotLine)),
+        pdict_item( 75, pen=dict(color='g')),
+        pdict_item( 50, pen=dict(color='w')),
+        pdict_item( 25, pen=dict(color='r')),
+        pdict_item(  0, pen=dict(color='r', style=QtCore.Qt.DotLine)),
     ])
 
-    def plt_init():
-        #  making sure pyplot is imported
-        import matplotlib.pyplot as plt
-        plt.ion()
-        plt.title(f'Learning Performance ({agent.name})')
-        plt.xlabel('Learning Episode')
-        plt.ylabel('Expected Return $\mathbb{E}[ G_0 ]$')
-        plt.legend(loc='lower right', frameon=True)
-
-    pplotter = cbacks.PLT_PercentilePlotter(
-        env,
-        (nruns, nepisodes),
-        pdict,
-        plt_init=plt_init
+    q_returns, _ = graph.plot(shape, pdict,
+        window=dict(text='Returns', size='16pt', bold=True),
+        labels=dict(left='G_t', bottom='Episode'),
     )
-    callbacks = pplotter,
+    q_gnorms, _ = graph.plot(shape, pdict,
+        window=dict(text='Gradient Norms', size='16pt', bold=True),
+        labels=dict(left='|w|', bottom='Episode'),
+    )
 
-    horizon = misc.Horizon(horizon)
-    sys = pomdp.System(env, env.model, horizon)
+    H = misc.Horizon(horizon)
+    sys = pomdp.System(env, env.model, H)
 
     v = mp.RawValue('i', 0)
     l = mp.Lock()
@@ -130,33 +124,61 @@ if __name__ == '__main__':
             # this index is a better one!! linear throughout processes
             i = v.value
             v.value += 1
-        print(f'Starting run {i} / {nruns};  Running {nepisodes} episodes...')
+
+        print(f'Starting run {i+1} / {nruns};  Running {nepisodes} episodes...')
         rnd.seed()  # ensure different randomization
 
-        # setting plotting data index
-        # pplotter.idx = ri * nepisodes
-        pplotter.idx = i * nepisodes
+        idx_results = i * nepisodes
+        idx_gnorms = i * nepisodes
+
+        # NOTE if this is outside I have a bug
+        @Callback
+        def episode_return(sys, episode):
+            G = 0.
+            for context, a, feedback in episode:
+                r = feedback.r
+                G = r + env.gamma * G
+            return G
+
+        feedbacks = ()
+        feedbacks_episode = episode_return,
+
+        def episode_gnorm(gradient):
+            nonlocal idx_gnorms
+            if gradient.dtype == object:
+                gnorm = sum(_.sum() for _ in gradient ** 2)
+            else:
+                gnorm = np.sum(gradient * gradient)
+            q_gnorms.put((idx_gnorms, gnorm))
+            idx_gnorms += 1
+
+        # TODO better way to handle callbacks...
+        agent.callbacks_episode = [episode_gnorm]
+        # TODO... how to do callbacks for different types of agents?
+
+        @episode_return.callback
+        def plot_return(G):
+            nonlocal idx_results
+            q_returns.put((idx_results, G))
+            idx_results += 1
 
         #  reset agent before each new learning run
         agent.reset()
         sys.run(
             agent,
             nepisodes=nepisodes,
-            callbacks=callbacks,
+            feedbacks=feedbacks,
+            feedbacks_episode=feedbacks_episode,
         )
 
+
     if parall: # NOTE parallelized
-        with mp.Pool(processes=mp.cpu_count()-1) as pool:
-            pool.map(run, range(nruns))
+        with mp.Pool(processes=mp.cpu_count()) as pool:
+            result = pool.map(run, range(nruns))
     else: # NOTE serialized
         for ri in range(nruns):
             run(ri)
 
-    # np.set_printoptions(precision=2, suppress=True)
-
-    # this would kill the figures!
-    # for cb in callbacks:
-    #     cb.close()
 
     #  keeps figures alive
     import IPython

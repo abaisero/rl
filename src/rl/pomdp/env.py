@@ -13,10 +13,3 @@ class Environment(mdp.Environment):
     @property
     def nobs(self):
         return self.ofactory.nitems
-
-    # @classmethod
-    # def fromPOMDP(cls, fname):
-    #     env = Environment(sfactory, afactory, ofactory)
-    #     model = ???
-    #     env.model = model
-    #     return env

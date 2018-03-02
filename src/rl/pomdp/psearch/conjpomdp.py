@@ -74,7 +74,7 @@ class CONJPOMDP(P):
             g = delta
 
     def gsearch(self, params, dparams):
-        s = self.step_size
+        s = self.step_size()
         delta = yield params + s * dparams
         if self.inner(delta, dparams) < 0:
             # step back to bracket the maximum

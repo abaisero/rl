@@ -32,7 +32,7 @@ class IsGPOMDP(P):
         self.za = self.beta * self.za + self.policy.amodel.dlogprobs(n, a)
         self.da += (r * self.za - self.da) / (t+1)
 
-        self.zo = self.beta * self.zo + self.policy.omodel.dlogprobs(n, a, o, n1)
+        self.zo = self.beta * self.zo + self.policy.omodel.dlogprobs(n, o, n1)
         self.do += (r * self.zo - self.do) / (t+1)
 
     def feedback_episode(self, sys, episode):

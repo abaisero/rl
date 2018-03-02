@@ -64,4 +64,19 @@ class PolicyGradient(Agent):
         else:
             self.step_size.step()
 
+        # TODO how to clip when dparams is... FUCK
+        # TODO find way to handle array of objects...
+        lim = .05
+        if dparams.dtype == object:
+            for i, dp in enumerate(dparams):
+                dparams[i] = np.clip(dp, -lim, lim)
+        else:
+            dparams = np.clip(dparams, -lim, lim)
+
+        try:
+            for cbe in self.callbacks_episode:
+                cbe(dparams)
+        except AttributeError:
+            pass
+
         self.policy.params += dparams

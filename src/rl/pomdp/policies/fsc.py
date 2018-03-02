@@ -26,6 +26,8 @@ class FSC(Policy):
 
     @property
     def params(self):
+        # TODO need better way to handle multiparametric models...
+        # maybe just concatenate?  seems wrong..
         params = np.empty(2, dtype=object)
         params[:] = self.amodel.params, self.omodel.params
         return params
