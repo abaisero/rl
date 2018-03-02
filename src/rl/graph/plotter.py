@@ -30,12 +30,13 @@ def process_target(shape, q, pdict, **kwargs):
 
     percentiles = list(pdict)
     plt_pp = win.addPlot(
-        title='Percentiles',
-        labels=kwargs.get('labels', {}),
+        title='Run Percentiles',
+        left=kwargs.get('labels', {}).get('left', None),
         row=1, col=0)
     plt_pp.showAxis('right')
-    plt_pp.addLegend()
+    plt_pp.addLegend(offset=(-30, -30))
     plt_pp.showGrid(x=True, y=True)
+
 
     curves_pp = {p: plt_pp.plot(**pdata) for p, pdata in pdict.items()}
 
@@ -43,16 +44,37 @@ def process_target(shape, q, pdict, **kwargs):
     import matplotlib.cm as cm
     cmap = cm.tab10_r
     plt_rp = win.addPlot(
-        title='Current runs',
-        labels=kwargs.get('labels', {}),
+        title='Individual Runs',
+        left=kwargs.get('labels', {}).get('left', None),
+        bottom=kwargs.get('labels', {}).get('bottom', None),
         row=2, col=0)
+
     plt_rp.showAxis('right')
     plt_rp.showGrid(x=True, y=True)
     curves_rp = [plt_rp.plot(pen=cmap(i%cmap.N, bytes=True)) for i in range(data.shape[0])]
     # TODO too many curves will break this
 
+    # def setRange(rect=None, xRange=None, yRange=None, *args, **kwds):
+    #     if not kwds.get('disableAutoRange', True):
+    #         if yRange is not None:
+    #             yRange[0] = 0
+    #     # pg.ViewBox.setRange(vb, rect, xRange, yRange, *args, **kwds)
+    # plt_rp.vb.setRange = setRange
+
     plt_rp.setYLink(plt_pp)
     plt_rp.setXLink(plt_pp)
+
+    try:
+        plt_rp.setRange(
+            xRange=kwargs.get('ranges', {}).get('x'),
+            yRange=kwargs.get('ranges', {}).get('y'),
+        )
+        # plt_rp.setLimits(
+        #     xRange=kwargs.get('ranges', {}).get('x'),
+        #     yRange=kwargs.get('ranges', {}).get('y'),
+        # )
+    except Exception:
+        pass
 
     def update():
         # with l:

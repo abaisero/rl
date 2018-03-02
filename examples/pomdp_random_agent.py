@@ -47,8 +47,8 @@ if __name__ == '__main__':
 
     N = 5
     beta = .95
-    # step_size = optim.StepSize(10)
-    step_size = optim.Geometric(10, .99)
+    step_size = optim.StepSize(.1)
+    # step_size = optim.Geometric(10, .99)
     eps = 1e-10
     parall = False
     parall = True
@@ -112,6 +112,7 @@ if __name__ == '__main__':
     q_gnorms, _ = graph.plot(shape, pdict,
         window=dict(text='Gradient Norms', size='16pt', bold=True),
         labels=dict(left='|w|', bottom='Episode'),
+        # ranges=dict(y=[0, None]),
     )
 
     H = misc.Horizon(horizon)
@@ -146,9 +147,9 @@ if __name__ == '__main__':
         def episode_gnorm(gradient):
             nonlocal idx_gnorms
             if gradient.dtype == object:
-                gnorm = sum(_.sum() for _ in gradient ** 2)
+                gnorm = np.sqrt(sum(_.sum() for _ in gradient ** 2))
             else:
-                gnorm = np.sum(gradient * gradient)
+                gnorm = np.sqrt(np.sum(gradient ** 2))
             q_gnorms.put((idx_gnorms, gnorm))
             idx_gnorms += 1
 
