@@ -67,7 +67,7 @@ class PolicyGradient(Agent):
         # TODO how to clip when dparams is... FUCK
         # TODO find way to handle array of objects...
 
-        lim = 100
+        lim = 1
         # if dparams.dtype == object:
         #     for i, dp in enumerate(dparams):
         #         dparams[i] = np.clip(dp, -lim, lim)

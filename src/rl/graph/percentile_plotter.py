@@ -21,7 +21,6 @@ def process_target(shape, q, pdict, **kwargs):
 
     from pyqtgraph.Qt import QtGui, QtCore
     import pyqtgraph as pg
-    from pyqtgraph.ptime import time
 
     app = QtGui.QApplication([])
     win = pg.GraphicsWindow()

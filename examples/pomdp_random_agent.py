@@ -29,7 +29,7 @@ if __name__ == '__main__':
     # logging configuration
     logging.config.dictConfig(LOGGING)
 
-    nruns, nepisodes, horizon = 100, 1000, 100
+    nruns, nepisodes, horizon = 100, 500, 100
     shape = nruns, nepisodes
 
     envname = 'Tiger'
@@ -44,14 +44,15 @@ if __name__ == '__main__':
     # env = envs.Tiger(.01)
     # env.gamma = .95
 
-    N = 5
-    beta = .95
-    step_size = optim.StepSize(.1)
+    N = 10
+    # beta = .95
+    beta = .5
+    step_size = optim.StepSize(.01)
     # step_size = optim.StepSize(1)
-    # step_size = optim.Geometric(10, .99)
+    # step_size = optim.Geometric(10, .999)
     eps = 1e-10
-    parall = False
-    parall = True
+    processes = mp.cpu_count()
+    processes = mp.cpu_count() - 2
 
     # TODO maybe FSC needs different step sizes for different strategies?
 
@@ -115,6 +116,22 @@ if __name__ == '__main__':
         # ranges=dict(y=[0, None]),
     )
 
+    # ashape = nepisodes, policy.nnodes, env.nactions
+    # q_amodel, _ = graph.distplot(ashape,
+    #     window=dict(text='Action Strategies', size='16pt', bold=True),
+    #     ylabels=env.afactory.values,
+    #     xlabels=policy.nfactory.values
+    # )
+
+    q_fsc, _ = graph.fscplot(policy, nepisodes)
+
+    # oshape = nepisodes, policy.nnodes, nnodes
+    # q_omodel, _ = graph.distplot(oshape,
+    #     window=dict(text='Observation Strategies', size='16pt', bold=True),
+    #     ylabels=env.afactory.values,
+    #     xlabels=policy.nfactory.values
+    # )
+
     H = misc.Horizon(horizon)
     sys = pomdp.System(env, env.model, H)
 
@@ -126,11 +143,15 @@ if __name__ == '__main__':
             i = v.value
             v.value += 1
 
-        print(f'Starting run {i+1} / {nruns};  Running {nepisodes} episodes...')
-        rnd.seed()  # ensure different randomization
+        seed = int(time.time() * 1000 + i * 61001) % 2 ** 32
+        print(f'Starting run {i+1} / {nruns};  Running {nepisodes} episodes... (with seed {seed})')
+
+        rnd.seed(seed)  # ensure different randomization
 
         idx_results = i * nepisodes
         idx_gnorms = i * nepisodes
+        # idx_amodel = 0
+        idx_fsc = 0
 
         # NOTE if this is outside I have a bug
         @Callback
@@ -143,6 +164,28 @@ if __name__ == '__main__':
 
         feedbacks = ()
         feedbacks_episode = episode_return,
+
+        if i == 0:
+            def episode_dplot(sys, episode):
+                global policy
+                # nonlocal idx_amodel
+                nonlocal idx_fsc
+
+                adist = policy.amodel.probs()
+                # TODO bug already happening...
+                adist /= adist.sum(axis=-1, keepdims=True)
+                # q_amodel.put((idx_amodel, dist))
+
+                odist = policy.omodel.probs()
+                odist /= odist.sum(axis=-1, keepdims=True)
+
+                q_fsc.put((idx_fsc, adist, odist))
+                idx_fsc += 1
+
+                if idx_fsc == nepisodes:
+                    q_fsc.put(None)
+
+            feedbacks_episode += episode_dplot,
 
         # TODO I can still print the different between parameters!!!!
         # YES this is correct..
@@ -175,8 +218,8 @@ if __name__ == '__main__':
         )
 
 
-    if parall: # NOTE parallelized
-        with mp.Pool(processes=mp.cpu_count()) as pool:
+    if processes > 1: # NOTE parallelized
+        with mp.Pool(processes=processes) as pool:
             result = pool.map(run, range(nruns))
     else: # NOTE serialized
         for ri in range(nruns):

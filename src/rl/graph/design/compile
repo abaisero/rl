@@ -1,0 +1,7 @@
+#!/usr/bin/zsh
+
+for f in *.ui; do
+  pyuic5 -o ${f%.*}.py $f
+done
+
+exit 0

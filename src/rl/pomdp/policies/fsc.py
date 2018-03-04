@@ -17,10 +17,14 @@ class FSC(Policy):
     def __init__(self, env, N):
         super().__init__(env)
         self.N = N  # number of nodes
-        self.nfactory = factory.FactoryN(N)
+        values = [f'n{i}' for i in range(N)]
+        # self.nfactory = factory.FactoryN(N)
+        self.nfactory = factory.FactoryValues(values)
 
         self.amodel = fmodel.Softmax(env.afactory, cond=(self.nfactory,))
         self.omodel = fmodel.Softmax(self.nfactory, cond=(self.nfactory, env.ofactory))
+        # self.omodel = fmodel.Softmax(self.nfactory, cond=(self.nfactory, env.afactory, env.ofactory))
+
         # TODO look at pgradient;  this won't work for some reason
         # self.params = np.array([self.amodel.params, self.omodel.params])
 
@@ -62,6 +66,7 @@ class FSC(Policy):
 
     def feedback_o(self, o):
         self.n = self.omodel.sample(self.n, o)
+        # self.n = self.omodel.sample(self.n, self.a, o)
         return IFeedback(n1=self.n)
 
     def dist(self):
@@ -71,4 +76,5 @@ class FSC(Policy):
         return self.amodel.pr(self.n, a)
 
     def sample(self):
-        return self.amodel.sample(self.n)
+        self.a = self.amodel.sample(self.n)
+        return self.a
