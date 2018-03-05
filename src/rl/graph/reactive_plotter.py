@@ -5,7 +5,7 @@ import sys
 
 from pyqtgraph.Qt import QtGui, QtCore
 import pyqtgraph as pg
-from .widgets import PPlotWidget
+from .widgets import DistWidget, DistComboWidget, FSCWindow
 
 import numpy as np
 
@@ -17,23 +17,31 @@ class DataThread(QtCore.QThread):
         self.data = data
 
     def run(self):
-        for idx, value in iter(self.q.get, None):
-            self.data.itemset(idx, value)
+        for idx, a0dist, adist in iter(self.q.get, None):
+            self.data[idx, :, 0] = a0dist
+            self.data[idx, :, 1:] = adist.T
 
 
-def process_target(shape, q, pdict, **kwargs):
+def process_target(q, nepisodes, alabels, olabels):
+    na = len(alabels)
+    no = len(olabels)
+
+    olabels.insert(0, '*')
+
+    shape = nepisodes, na, no + 1
     data = np.full(shape, np.nan)
 
     app = QtGui.QApplication([])
-    gui = PPlotWidget().setup(data, pdict, **kwargs)
+    gui = DistWidget().setup(data, alabels, olabels)
     gui.show()
 
     timer = QtCore.QTimer()
     timer.timeout.connect(gui.update)
-    timer.start(1000 / 10)
+    timer.start(1000)
 
     def endtimer():
         timer.stop()
+        gui.update()
 
     t = DataThread(q, data)
     t.finished.connect(endtimer)
@@ -42,9 +50,12 @@ def process_target(shape, q, pdict, **kwargs):
     sys.exit(app.exec_())
 
 
-def pplot(shape, pdict, **kwargs):
+def reactiveplot(reactive, nepisodes):
+    alabels = reactive.env.afactory.values
+    olabels = reactive.env.ofactory.values
+
     q = mp.Queue()
-    p = mp.Process(target=process_target, args=(shape, q, pdict), kwargs=kwargs)
+    p = mp.Process(target=process_target, args=(q, nepisodes, alabels, olabels))
     p.daemon = True
     p.start()
     return q, p

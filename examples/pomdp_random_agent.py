@@ -15,9 +15,7 @@ import numpy.random as rnd
 import logging.config
 from logconfig import LOGGING
 
-import matplotlib.pyplot as plt
-import seaborn as sns
-sns.set_style('darkgrid')
+from pyqtgraph.Qt import QtCore
 
 import multiprocessing as mp
 import time
@@ -29,7 +27,7 @@ if __name__ == '__main__':
     # logging configuration
     logging.config.dictConfig(LOGGING)
 
-    nruns, nepisodes, horizon = 100, 500, 100
+    nruns, nepisodes, horizon = 10, 500, 100
     shape = nruns, nepisodes
 
     envname = 'Tiger'
@@ -44,15 +42,16 @@ if __name__ == '__main__':
     # env = envs.Tiger(.01)
     # env.gamma = .95
 
-    N = 10
+    N = 5
     # beta = .95
     beta = .5
     step_size = optim.StepSize(.01)
     # step_size = optim.StepSize(1)
     # step_size = optim.Geometric(10, .999)
     eps = 1e-10
-    processes = mp.cpu_count()
-    processes = mp.cpu_count() - 2
+    # processes = 1
+    # processes = mp.cpu_count()
+    processes = mp.cpu_count() - 1
 
     # TODO maybe FSC needs different step sizes for different strategies?
 
@@ -93,15 +92,14 @@ if __name__ == '__main__':
     # name = f'CONJPOMDP-IsGPOMDP (N={N}, $\\beta$={beta}, $\\epsilon$={eps})'
     # agent = agents.PolicySearch(name, env, policy, ps)
 
+
     def pdict_item(percentile, **kwargs):
         return percentile, dict(name=f'{percentile/100:.2f}', **kwargs)
-
-    from pyqtgraph.Qt import QtCore
 
     pdict = dict([
         pdict_item(100, pen=dict(color='g', style=QtCore.Qt.DotLine)),
         pdict_item( 75, pen=dict(color='g')),
-        pdict_item( 50, pen=dict(color='w')),
+        pdict_item( 50),
         pdict_item( 25, pen=dict(color='r')),
         pdict_item(  0, pen=dict(color='r', style=QtCore.Qt.DotLine)),
     ])
@@ -113,24 +111,15 @@ if __name__ == '__main__':
     q_gnorms, _ = graph.pplot(shape, pdict,
         window=dict(text='Gradient Norms', size='16pt', bold=True),
         labels=dict(left='|w|', bottom='Episode'),
-        # ranges=dict(y=[0, None]),
     )
 
-    # ashape = nepisodes, policy.nnodes, env.nactions
-    # q_amodel, _ = graph.distplot(ashape,
-    #     window=dict(text='Action Strategies', size='16pt', bold=True),
-    #     ylabels=env.afactory.values,
-    #     xlabels=policy.nfactory.values
-    # )
-
-    q_fsc, _ = graph.fscplot(policy, nepisodes)
-
-    # oshape = nepisodes, policy.nnodes, nnodes
-    # q_omodel, _ = graph.distplot(oshape,
-    #     window=dict(text='Observation Strategies', size='16pt', bold=True),
-    #     ylabels=env.afactory.values,
-    #     xlabels=policy.nfactory.values
-    # )
+    try:
+        pplot = policy.plot
+    except AttributeError:
+        policy_plot = False
+    else:
+        pplot(nepisodes)
+        policy_plot = True
 
     H = misc.Horizon(horizon)
     sys = pomdp.System(env, env.model, H)
@@ -139,7 +128,7 @@ if __name__ == '__main__':
     l = mp.Lock()
     def run(ri):
         with l:
-            # this index is a better one!! linear throughout processes
+            # true sequential index
             i = v.value
             v.value += 1
 
@@ -150,8 +139,6 @@ if __name__ == '__main__':
 
         idx_results = i * nepisodes
         idx_gnorms = i * nepisodes
-        # idx_amodel = 0
-        idx_fsc = 0
 
         # NOTE if this is outside I have a bug
         @Callback
@@ -166,26 +153,11 @@ if __name__ == '__main__':
         feedbacks_episode = episode_return,
 
         if i == 0:
-            def episode_dplot(sys, episode):
-                global policy
-                # nonlocal idx_amodel
-                nonlocal idx_fsc
+            if policy_plot is not None:
+                def episode_dplot(sys, episode):
+                    policy.plot_update()
 
-                adist = policy.amodel.probs()
-                # TODO bug already happening...
-                adist /= adist.sum(axis=-1, keepdims=True)
-                # q_amodel.put((idx_amodel, dist))
-
-                odist = policy.omodel.probs()
-                odist /= odist.sum(axis=-1, keepdims=True)
-
-                q_fsc.put((idx_fsc, adist, odist))
-                idx_fsc += 1
-
-                if idx_fsc == nepisodes:
-                    q_fsc.put(None)
-
-            feedbacks_episode += episode_dplot,
+                feedbacks_episode += episode_dplot,
 
         # TODO I can still print the different between parameters!!!!
         # YES this is correct..
@@ -225,6 +197,8 @@ if __name__ == '__main__':
         for ri in range(nruns):
             run(ri)
 
+    q_returns.put(None)
+    q_gnorms.put(None)
 
     #  keeps figures alive
     import IPython

@@ -1,4 +1,5 @@
 from .policy import Policy
+import rl.graph as graph
 
 import pytk.factory.model as fmodel
 
@@ -64,3 +65,21 @@ class Reactive(Policy):
         if self.o is None:
             return self.a0model.sample()
         return self.amodel.sample(self.o)
+
+    def plot(self, nepisodes):
+        self.neps = nepisodes
+        self.q, self.p = graph.reactiveplot(self, nepisodes)
+        self.idx = 0
+
+    def plot_update(self):
+        a0dist = self.a0model.probs()
+        a0dist /= a0dist.sum(axis=-1, keepdims=True)
+
+        adist = self.amodel.probs()
+        adist /= adist.sum(axis=-1, keepdims=True)
+
+        self.q.put((self.idx, a0dist, adist))
+        self.idx += 1
+
+        if self.idx == self.neps:
+            self.q.put(None)

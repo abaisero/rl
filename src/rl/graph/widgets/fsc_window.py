@@ -12,3 +12,10 @@ class FSCWindow(QtWidgets.QMainWindow):
 
     def addTab(self, widget, name):
         self.tabWidget.addTab(widget, name)
+
+    def update(self, *, updateAll=False):
+        if updateAll:
+            for wi in range(len(self.tabWidget)):
+                self.tabWidget.widget(wi).update()
+        else:
+            self.tabWidget.currentWidget().update()

@@ -1,4 +1,5 @@
 from .policy import Policy
+import rl.graph as graph
 
 import pytk.factory as factory
 import pytk.factory.model as fmodel
@@ -17,7 +18,7 @@ class FSC(Policy):
     def __init__(self, env, N):
         super().__init__(env)
         self.N = N  # number of nodes
-        values = [f'n{i}' for i in range(N)]
+        values = [f'node_{i}' for i in range(N)]
         # self.nfactory = factory.FactoryN(N)
         self.nfactory = factory.FactoryValues(values)
 
@@ -78,3 +79,21 @@ class FSC(Policy):
     def sample(self):
         self.a = self.amodel.sample(self.n)
         return self.a
+
+    def plot(self, nepisodes):
+        self.neps = nepisodes
+        self.q, self.p = graph.fscplot(self, nepisodes)
+        self.idx = 0
+
+    def plot_update(self):
+        adist = self.amodel.probs()
+        adist /= adist.sum(axis=-1, keepdims=True)
+
+        odist = self.omodel.probs()
+        odist /= odist.sum(axis=-1, keepdims=True)
+
+        self.q.put((self.idx, adist, odist))
+        self.idx += 1
+
+        if self.idx == self.neps:
+            self.q.put(None)
