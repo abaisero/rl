@@ -12,27 +12,26 @@ IContext = namedtuple('IContext', 'n')
 IFeedback = namedtuple('IFeedback', 'n1')
 
 
-# TODO reset!!!!! choose initial state how? just first one?
-
 class FSC(Policy):
-    def __init__(self, env, N):
+    def __init__(self, env, N, consistent=False):
         super().__init__(env)
         self.N = N  # number of nodes
+        self.consistent = consistent
+
         values = [f'node_{i}' for i in range(N)]
-        # self.nfactory = factory.FactoryN(N)
         self.nfactory = factory.FactoryValues(values)
 
         self.amodel = fmodel.Softmax(env.afactory, cond=(self.nfactory,))
-        self.omodel = fmodel.Softmax(self.nfactory, cond=(self.nfactory, env.ofactory))
-        # self.omodel = fmodel.Softmax(self.nfactory, cond=(self.nfactory, env.afactory, env.ofactory))
+        if consistent:
+            self.omodel = fmodel.Softmax(self.nfactory, cond=(self.nfactory, env.afactory, env.ofactory))
+        else:
+            self.omodel = fmodel.Softmax(self.nfactory, cond=(self.nfactory, env.ofactory))
 
         # TODO look at pgradient;  this won't work for some reason
         # self.params = np.array([self.amodel.params, self.omodel.params])
 
     @property
     def params(self):
-        # TODO need better way to handle multiparametric models...
-        # maybe just concatenate?  seems wrong..
         params = np.empty(2, dtype=object)
         params[:] = self.amodel.params, self.omodel.params
         return params
@@ -42,6 +41,15 @@ class FSC(Policy):
         aparams, oparams = value
         self.amodel.params = aparams
         self.omodel.params = oparams
+
+    def dlogprobs(self, n, a, o, n1):
+        dlogprobs = np.empty(2, dtype=object)
+        dlogprobs[0] = self.amodel.dlogprobs(n, a)
+        if self.consistent:
+            dlogprobs[1] = self.omodel.dlogprobs(n, a, o, n1)
+        else:
+            dlogprobs[1] = self.omodel.dlogprobs(n, o, n1)
+        return dlogprobs
 
     def reset(self):
         self.amodel.reset()
@@ -66,8 +74,10 @@ class FSC(Policy):
         return self.feedback_o(feedback.o)
 
     def feedback_o(self, o):
-        self.n = self.omodel.sample(self.n, o)
-        # self.n = self.omodel.sample(self.n, self.a, o)
+        if self.consistent:
+            self.n = self.omodel.sample(self.n, self.a, o)
+        else:
+            self.n = self.omodel.sample(self.n, o)
         return IFeedback(n1=self.n)
 
     def dist(self):

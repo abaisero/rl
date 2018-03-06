@@ -4,18 +4,18 @@ import rl.graph as graph
 import pytk.factory.model as fmodel
 
 from collections import namedtuple
+import numpy as np
 
 
 IContext = namedtuple('IContext', 'o')
 IFeedback = namedtuple('IFeedback', 'o1')
 
-# TODO reset!!!!! how?! does one receive an observation to begin with?
-import numpy as np
-
 
 class Reactive(Policy):
     def __init__(self, env):
         super().__init__(env)
+        # TODO create node set? as extension of observation space?
+
         self.a0model = fmodel.Softmax(env.afactory)
         self.amodel = fmodel.Softmax(env.afactory, cond=(env.ofactory,))
         # TODO look at pgradient;  this won't work for some reason
@@ -32,6 +32,16 @@ class Reactive(Policy):
         a0params, aparams = value
         self.a0model.params = a0params
         self.amodel.params = aparams
+
+    def dlogprobs(self, t, o, a):
+        dlogprobs = np.empty(2, dtype=object)
+        if t == 0:
+            dlogprobs[0] = self.a0model.dlogprobs(o, a)
+            dlogprobs[1] = 0
+        else:
+            dlogprobs[0] = 0
+            dlogprobs[1] = self.amodel.dlogprobs(o, a)
+        return dlogprobs
 
     def reset(self):
         self.a0model.reset()

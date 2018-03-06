@@ -64,25 +64,13 @@ class PolicyGradient(Agent):
         else:
             self.step_size.step()
 
-        # TODO how to clip when dparams is... FUCK
-        # TODO find way to handle array of objects...
+        lim = .1
+        lim2 = lim ** 2
 
-        lim = 1
-        # if dparams.dtype == object:
-        #     for i, dp in enumerate(dparams):
-        #         dparams[i] = np.clip(dp, -lim, lim)
-        # else:
-        #     dparams = np.clip(dparams, -lim, lim)
-
-        # clip by norm
-        if dparams.dtype == object:
-            gnorm = np.sqrt(sum(_.sum() for _ in dparams ** 2))
-        else:
-            gnorm = np.sqrt(np.sum(dparams ** 2))
-
-        if gnorm > lim:
+        gnorm2 = np.sum(_.sum() for _ in dparams ** 2)
+        if gnorm2 > lim2:
+            gnorm = np.sqrt(gnorm2)
             dparams *= lim / gnorm
-
 
         try:
             for cbe in self.callbacks_episode:
