@@ -10,6 +10,10 @@ class FSCWindow(QtWidgets.QMainWindow):
 
         self.tabWidget = self.ui.tabWidget
 
+    def setup(self):
+        self.tabWidget.currentChanged.connect(self.update)
+        return self
+
     def addTab(self, widget, name):
         self.tabWidget.addTab(widget, name)
 

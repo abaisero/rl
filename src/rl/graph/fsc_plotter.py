@@ -34,7 +34,7 @@ def process_target(q, nepisodes, alabels, nlabels, olabels):
     odata = np.full(oshape, np.nan)
 
     app = QtGui.QApplication([])
-    gui = FSCWindow()
+    gui = FSCWindow().setup()
     gui.setWindowTitle('FSC')
 
     gui.addTab(
