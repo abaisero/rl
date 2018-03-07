@@ -25,6 +25,8 @@ setup(
     package_data={'rl': ['data/pomdps/*.pomdp']},
     include_package_data=True,
 
+    scripts=['scripts/rl-pomdps', 'scripts/rl-fscs'],
+
     install_requires=['numpy', 'scipy'],  #  GPy, pytk
     license='MIT',
     test_suite='tests',
