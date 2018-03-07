@@ -3,16 +3,16 @@ import pyqtgraph as pg
 import numpy as np
 
 
-class DistWidget(pg.GraphicsLayoutWidget):
+class SparseDistWidget(pg.GraphicsLayoutWidget):
     def setup(self, data, ylabels, xlabels, mask=None):
+        self.setData(data)
+
         ny = len(ylabels)
         nx = len(xlabels)
 
-        self.nomask = np.ones((ny, nx), dtype=bool)
         self.plots = np.empty((ny, nx), dtype=object)
         self.curves = np.empty((ny, nx), dtype=object)
 
-        self.nextCol()
         for xlab in xlabels:
             self.addLabel(text=xlab, bold=True)
 
@@ -21,6 +21,10 @@ class DistWidget(pg.GraphicsLayoutWidget):
             self.addLabel(text=ylab, bold=True, angle=-90)
 
             for xi in range(nx):
+                if not mask[yi, xi]:
+                    self.nextCol()
+                    continue
+
                 plot = self.addPlot()
                 plot.enableAutoRange(False)
                 plot.setYRange(0, 1)
@@ -31,22 +35,11 @@ class DistWidget(pg.GraphicsLayoutWidget):
                 self.plots[yi, xi] = plot
                 self.curves[yi, xi] = curve
 
-        self.setData(data)
-        self.setMask(mask)
-
         return self
-
-    def setMask(self, mask):
-        if mask is None:
-            mask = self.nomask
-
-        for idx, plot in np.ndenumerate(self.plots):
-            plot.setVisible(mask[idx])
 
     def setData(self, data):
         self.data = data
 
     def update(self):
         for (yi, xi), curve in np.ndenumerate(self.curves):
-            if curve is not None:
-                curve.setData(self.data[:, yi, xi])
+            curve.setData(self.data[:, yi, xi])

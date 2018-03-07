@@ -8,89 +8,14 @@ import numpy as np
 
 ### LEXER
 
-tokens = (
-    'COLON',
-    'ASTERISK',
-    'PLUS',
-    'MINUS',
-    'STRING',
-    'INT',
-    'FLOAT',
-)
-
-reserved = {
-    'discount': 'DISCOUNT',
-    'values': 'VALUES',
-    'states': 'STATES',
-    'actions': 'ACTIONS',
-    'observations': 'OBSERVATIONS',
-    'T': 'T',
-    'O': 'O',
-    'R': 'R',
-    'uniform': 'UNIFORM',
-    'identity': 'IDENTITY',
-    'reward': 'REWARD',
-    'cost': 'COST',
-    'start': 'START',
-    'include': 'INCLUDE',
-    'exclude': 'EXCLUDE',
-    'reset': 'RESET',
-}
-
-tokens += tuple(reserved.values())
-
-t_COLON = r':'
-t_ASTERISK = r'\*'
-t_PLUS = r'\+'
-t_MINUS = r'-'
-
-
-def t_STRING(t):
-    r'[a-zA-Z][a-zA-Z0-9\_\-]*'
-    if t.value in reserved:
-        t.type = reserved[t.value]
-    return t
-
-def t_NUMBER(t):
-    r'[0-9]*\.?[0-9]+((E|e)(\+|-)?[0-9]+)?'
-    try:
-        t.value = int(t.value)
-    except ValueError:
-        pass
-    else:
-        t.type = 'INT'
-        return t
-
-    try:
-        t.value = float(t.value)
-    except ValueError:
-        pass
-    else:
-        t.type = 'FLOAT'
-        return t
-
-def t_COMMENT(t):
-    r'\#.*'
-    pass
-
-t_ignore = ' \t'
-
-# updates line number
-def t_newline(t):
-    r'\n'
-    t.lexer.lineno += 1
-
-def t_error(t):
-    print(f'Illegal character \'{t.value[0]}\'')
-    t.lexer.skip(1)
-
-lex.lex()
+from rl.parsers.dotpomdp import tokrules as tokrules
+lexer = lex.lex(module=tokrules)
 
 
 ### PARSER
 
 class POMDP_Parser:
-    tokens = tokens
+    tokens = tokrules.tokens
 
     def __init__(self):
         self.env = None
@@ -104,8 +29,8 @@ class POMDP_Parser:
     def p_error(self, p):
         print('Parsing Error:', p.lineno, p.lexpos, p.type, p.value)
 
-    def p_pomdp_file(self, p):
-        """ pomdp_file : preamble start_state param_list """
+    def p_pomdp(self, p):
+        """ pomdp : preamble start_state structure_list """
 
         s0model = pomdp.State0Distribution(self.env)
         s1model = pomdp.State1Distribution(self.env)
@@ -194,11 +119,11 @@ class POMDP_Parser:
         p[0] = 'ofactory', factory.FactoryValues(p[3])
 
     def p_name_list_1(self, p):
-        """ name_list : name_list STRING """
+        """ name_list : name_list ID """
         p[0] = p[1] + [p[2]]
 
     def p_name_list_2(self, p):
-        """ name_list : STRING """
+        """ name_list : ID """
         p[0] = [p[1]]
 
     def p_start_state_0(self, p):
@@ -228,23 +153,23 @@ class POMDP_Parser:
         self.S[s] = 1
 
     def p_start_state_3(self, p):
-        """ start_state : START INCLUDE COLON start_state_list """
+        """ start_state : START INCLUDE COLON state_list """
         slist = p[4]
         self.S = np.zeros(self.env.nstates)
         self.S[slist] = 1 / len(slist)
 
     def p_start_state_4(self, p):
-        """ start_state : START EXCLUDE COLON start_state_list """
+        """ start_state : START EXCLUDE COLON state_list """
         slist = p[4]
         self.S = np.full(self.env.nstates, 1 / (self.env.nstates - len(slist)))
         self.S[s0s] = 0
 
-    def p_start_state_list_1(self, p):
-        """ start_state_list : start_state_list state """
+    def p_state_list_1(self, p):
+        """ state_list : state_list state """
         p[0] = p[1] + [p[2]]
 
-    def p_start_state_list_2(self, p):
-        """ start_state_list : state """
+    def p_state_list_2(self, p):
+        """ state_list : state """
         p[0] = [p[1]]
 
     def p_state_1(self, p):
@@ -252,7 +177,7 @@ class POMDP_Parser:
         p[0] = p[1]
 
     def p_state_2(self, p):
-        """ state : STRING """
+        """ state : ID """
         p[0] = self.env.sfactory.i(p[1])
 
     def p_state_3(self, p):
@@ -264,7 +189,7 @@ class POMDP_Parser:
         p[0] = p[1]
 
     def p_action_2(self, p):
-        """ action : STRING """
+        """ action : ID """
         p[0] = self.env.afactory.i(p[1])
 
     def p_action_3(self, p):
@@ -276,7 +201,7 @@ class POMDP_Parser:
         p[0] = p[1]
 
     def p_obs_2(self, p):
-        """ obs : STRING """
+        """ obs : ID """
         p[0] = self.env.ofactory.i(p[1])
 
     def p_obs_3(self, p):
@@ -305,96 +230,96 @@ class POMDP_Parser:
         """ nmatrix : number """
         p[0] = [p[1]]
 
-    def p_param_list(self, p):
-        """ param_list : param_list t_spec
-                       | param_list o_spec
-                       | param_list r_spec
-                       | """
+    def p_structure_list(self, p):
+        """ structure_list : structure_list t_structure
+                           | structure_list o_structure
+                           | structure_list r_structure
+                           | """
         pass
 
-    def p_t_spec_1(self, p):
-        """ t_spec : T COLON action COLON state COLON state prob """
+    def p_t_structure_1(self, p):
+        """ t_structure : T COLON action COLON state COLON state prob """
         a, s0, s1, pm = p[3], p[5], p[7], p[8]
         self.T[a, s0, s1] = pm
 
-    def p_t_spec_2_1(self, p):
-        """ t_spec : T COLON action COLON state UNIFORM """
+    def p_t_structure_2_1(self, p):
+        """ t_structure : T COLON action COLON state UNIFORM """
         a, s0 = p[3], p[5]
         self.T[a, s0] = 1 / self.env.nstates
 
-    def p_t_spec_2_2(self, p):
-        """ t_spec : T COLON action COLON state RESET """
+    def p_t_structure_2_2(self, p):
+        """ t_structure : T COLON action COLON state RESET """
         self.T[a, s0] = self.S
 
-    def p_t_spec_2_3(self, p):
-        """ t_spec : T COLON action COLON state pmatrix """
+    def p_t_structure_2_3(self, p):
+        """ t_structure : T COLON action COLON state pmatrix """
         a, s0, pm = p[3], p[5], p[6]
         self.T[a, s0] = pm
 
-    def p_t_spec_3_1(self, p):
-        """ t_spec : T COLON action UNIFORM """
+    def p_t_structure_3_1(self, p):
+        """ t_structure : T COLON action UNIFORM """
         a = p[3]
         self.T[a] = 1 / self.env.nstates
 
-    def p_t_spec_3_2(self, p):
-        """ t_spec : T COLON action IDENTITY """
+    def p_t_structure_3_2(self, p):
+        """ t_structure : T COLON action IDENTITY """
         a = p[3]
         self.T[a] = np.eye(self.env.nstates)
 
-    def p_t_spec_3_3(self, p):
-        """ t_spec : T COLON action pmatrix """
+    def p_t_structure_3_3(self, p):
+        """ t_structure : T COLON action pmatrix """
         a, pm = p[3], p[4]
         self.T[a] = np.reshape(pm, (self.env.nstates, self.env.nstates))
 
-    def p_o_spec_1(self, p):
-        """ o_spec : O COLON action COLON state COLON obs prob """
+    def p_o_structure_1(self, p):
+        """ o_structure : O COLON action COLON state COLON obs prob """
         a, s1, o, pr = p[3], p[5], p[7], p[8]
         self.O[a, s1, o] = pr
 
-    def p_o_spec_2_1(self, p):
-        """ o_spec : O COLON action COLON state UNIFORM """
+    def p_o_structure_2_1(self, p):
+        """ o_structure : O COLON action COLON state UNIFORM """
         a, s1 = p[3], p[5]
         self.O[a, s1] = 1 / self.env.nobs
 
-    def p_o_spec_2_2(self, p):
-        """ o_spec : O COLON action COLON state RESET """
+    def p_o_structure_2_2(self, p):
+        """ o_structure : O COLON action COLON state RESET """
         # TODO I suspect this is not supposed to be part of the grammar
         raise ValueError('I do not know how to handle the `reset` keyword')
 
-    def p_o_spec_2_3(self, p):
-        """ o_spec : O COLON action COLON state pmatrix """
+    def p_o_structure_2_3(self, p):
+        """ o_structure : O COLON action COLON state pmatrix """
         a, s1, pm = p[3], p[5], p[6]
         self.O[a, s1] = pm
 
-    def p_o_spec_3_1(self, p):
-        """ o_spec : O COLON action UNIFORM """
+    def p_o_structure_3_1(self, p):
+        """ o_structure : O COLON action UNIFORM """
         a = p[3]
         self.O[a] = 1 / self.env.nobs
 
-    def p_o_spec_3_2(self, p):
-        """ o_spec : O COLON action RESET """
+    def p_o_structure_3_2(self, p):
+        """ o_structure : O COLON action RESET """
         raise ValueError('I do not know how to handle the `reset` keyword')
 
-    def p_o_spec_3_3(self, p):
-        """ o_spec : O COLON action pmatrix """
+    def p_o_structure_3_3(self, p):
+        """ o_structure : O COLON action pmatrix """
         a, pm = p[3], p[4]
         self.O[a] = np.reshape(pm, (self.env.nstates, self.env.nobs))
 
     # TODO I could improve this considerably... if I were to not collect
     # nmatrix data in a list... but write to matrix directly!
 
-    def p_r_spec_1(self, p):
-        """ r_spec : R COLON action COLON state COLON state COLON obs number """
+    def p_r_structure_1(self, p):
+        """ r_structure : R COLON action COLON state COLON state COLON obs number """
         a, s0, s1, o, r = p[3], p[5], p[7], p[9], p[10]
         self.R[a, s0, s1, o] = r
 
-    def p_r_spec_2(self, p):
-        """ r_spec : R COLON action COLON state COLON state nmatrix """
+    def p_r_structure_2(self, p):
+        """ r_structure : R COLON action COLON state COLON state nmatrix """
         a, s0, s1, r = p[3], p[5], p[7], p[8]
         self.R[a, s0, s1] = r
 
-    def p_r_spec_3(self, p):
-        """ r_spec : R COLON action COLON state nmatrix """
+    def p_r_structure_3(self, p):
+        """ r_structure : R COLON action COLON state nmatrix """
         a, s0 = p[3], p[5]
         self.R[a, s0] = r
 
@@ -417,5 +342,27 @@ class POMDP_Parser:
 def parse(f, **kwargs):
     p = POMDP_Parser()
     y = yacc.yacc(module=p)
-    y.parse(f.read(), **kwargs)
+    y.parse(f.read(), lexer=lexer, **kwargs)
     return p.env
+
+
+from pkg_resources import resource_filename
+from contextlib import contextmanager
+# import rl
+
+
+_open = open  # saving default name
+@contextmanager
+def open(fname):
+    try:
+        f = _open(fname)
+    except FileNotFoundError:
+        fname = resource_filename('rl', f'data/pomdp/{fname}.pomdp')
+        f = _open(fname)
+
+    yield f
+    f.close()
+
+def env(fname):
+    with open(fname) as f:
+        return parse(f)
