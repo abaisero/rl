@@ -5,6 +5,8 @@ import rl.pomdp.psearch as psearch
 import rl.pomdp.agents as agents
 import rl.optim as optim
 import rl.graph as graph
+import rl.parsers.dotpomdp as dotpomdp
+import rl.parsers.dotfsc as dotfsc
 import rl.misc as misc
 
 from pytk.callbacks import Callback
@@ -27,26 +29,38 @@ if __name__ == '__main__':
     # logging configuration
     logging.config.dictConfig(LOGGING)
 
-    nruns, nepisodes, horizon = 10, 500, 100
+    nruns, nepisodes, horizon = 10, 5000, 100
     shape = nruns, nepisodes
 
-    envname = 'Tiger'
+    # NOTE
+    # envname, N, beta, step_size = 'loadunload', 2, .95, optim.StepSize(1)
+
+    envname = 'Tiger.smooth'
+    # envname = 'Tiger'
     # envname = 'loadunload'
     # envname = 'heaven-hell'
     # envname = 'Hallway'
     # envname = 'Hallway2'
     # envname = 'TagAvoid'  # funny;  probabilities don't sum up to 1
-    with envs.dotpomdp(envname) as f:
-        env = envs.parse(f)
+    # with dotpomdp.open(envname) as f:
+    #     env = envs.parse(f)
+
+    env = dotpomdp.env(envname)
 
     # env = envs.Tiger(.01)
     # env.gamma = .95
 
-    N = 5
-    # beta = .95
-    beta = .5
-    step_size = optim.StepSize(.01)
+    # TODO make script file!
+    # TODO make sparse FSC
+    # TODO make structured FSC!!!
+    # TODO save running results and combine in a table / plot...
+
+    N = 10
+    K = 3
+    beta = .95
     # step_size = optim.StepSize(1)
+    step_size = optim.StepSize(.1)
+    # step_size = optim.StepSize(.01)
     # step_size = optim.Geometric(10, .999)
     eps = 1e-10
     # processes = 1
@@ -80,7 +94,22 @@ if __name__ == '__main__':
     # agent = agents.PolicySearch(name, env, policy, ps)
 
     # Istate-GPOMDP (params N and beta)
-    policy = policies.FSC(env, N)
+    # policy = policies.FSC(env, N)
+    # pg = psearch.IsGPOMDP(policy, beta)
+    # name = f'IsGPOMDP (N={N}, $\\beta$={beta})'
+    # agent = agents.PolicyGradient(name, env, policy, pg, step_size=step_size)
+
+    # Sparse Istate-GPOMDP (params N, K and beta)
+    # policy = policies.SparseFSC(env, N, K)
+    # pg = psearch.IsGPOMDP(policy, beta)
+    # name = f'IsGPOMDP (N={N}, $\\beta$={beta})'
+    # agent = agents.PolicyGradient(name, env, policy, pg, step_size=step_size)
+
+    # Structured Istate-GPOMDP (params N and beta)
+
+    fscname = 'tiger.mini'
+    n0, amask, nmask = dotfsc.fsc(fscname)
+    policy = policies.StructuredFSC(env, amask, nmask, n0)
     pg = psearch.IsGPOMDP(policy, beta)
     name = f'IsGPOMDP (N={N}, $\\beta$={beta})'
     agent = agents.PolicyGradient(name, env, policy, pg, step_size=step_size)
@@ -97,11 +126,11 @@ if __name__ == '__main__':
         return percentile, dict(name=f'{percentile/100:.2f}', **kwargs)
 
     pdict = dict([
+        pdict_item(  0, pen=dict(color='r', style=QtCore.Qt.DotLine)),
         pdict_item(100, pen=dict(color='g', style=QtCore.Qt.DotLine)),
+        pdict_item( 25, pen=dict(color='r')),
         pdict_item( 75, pen=dict(color='g')),
         pdict_item( 50),
-        pdict_item( 25, pen=dict(color='r')),
-        pdict_item(  0, pen=dict(color='r', style=QtCore.Qt.DotLine)),
     ])
 
     q_returns, _ = graph.pplot(shape, pdict,
@@ -190,10 +219,10 @@ if __name__ == '__main__':
         )
 
 
-    if processes > 1: # NOTE parallelized
+    if processes > 1:  # NOTE parallelized
         with mp.Pool(processes=processes) as pool:
             result = pool.map(run, range(nruns))
-    else: # NOTE serialized
+    else:  # NOTE serialized
         for ri in range(nruns):
             run(ri)
 

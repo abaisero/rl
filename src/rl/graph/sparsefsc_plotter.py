@@ -23,7 +23,7 @@ class DataThread(QtCore.QThread):
             self.ndata[idx] = ndist.T
 
 
-def process_target(q, nepisodes, alabels, nlabels, olabels):
+def process_target(q, nepisodes, alabels, nlabels, olabels, nnmask):
     na = len(alabels)
     nn = len(nlabels)
     no = len(olabels)
@@ -32,6 +32,7 @@ def process_target(q, nepisodes, alabels, nlabels, olabels):
     adata = np.full(ashape, np.nan)
     nshape = nepisodes, nn, no, nn
     ndata = np.full(nshape, np.nan)
+    nmask = np.stack([nnmask] * no, axis=1)
 
     app = QtGui.QApplication([])
     gui = FSCWindow().setup()
@@ -43,12 +44,12 @@ def process_target(q, nepisodes, alabels, nlabels, olabels):
     )
 
     gui.addTab(
-        DistComboWidget().setup(ndata, nlabels, nlabels, olabels, 2),
+        DistComboWidget().setup(ndata, nlabels, nlabels, olabels, 2, nmask),
         'O-Strategy | obs',
     )
 
     gui.addTab(
-        DistComboWidget().setup(ndata, nlabels, olabels, nlabels, 3),
+        DistComboWidget().setup(ndata, nlabels, olabels, nlabels, 3, nmask),
         'O-Strategy | node',
     )
 
@@ -70,13 +71,14 @@ def process_target(q, nepisodes, alabels, nlabels, olabels):
     sys.exit(app.exec_())
 
 
-def fscplot(fsc, nepisodes):
+def sparsefscplot(fsc, nepisodes):
     alabels = fsc.env.afactory.values
     nlabels = fsc.nfactory.values
     olabels = fsc.env.ofactory.values
+    nnmask = fsc.nn
 
     q = mp.Queue()
-    p = mp.Process(target=process_target, args=(q, nepisodes, alabels, nlabels, olabels))
+    p = mp.Process(target=process_target, args=(q, nepisodes, alabels, nlabels, olabels, nnmask))
     p.daemon = True
     p.start()
     return q, p

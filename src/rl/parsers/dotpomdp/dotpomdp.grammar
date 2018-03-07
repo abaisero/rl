@@ -1,0 +1,112 @@
+pomdp : preamble_list start_state structure_list
+      ;
+
+preamble_list : preamble_list preamble_item
+              | preamble_item
+              ;
+
+preamble_item : preamble_discount
+              | preamble_value
+              | preamble_state
+              | preamble_action
+              | preamble_obs
+              ;
+
+preamble_discount : DISCOUNT COLON FLOAT
+                  ;
+
+preamble_value : VALUES COLON REWARD
+               | VALUES COLON COST
+               ;
+
+preamble_state : STATES COLON INT
+               | STATES COLON name_list
+               ;
+
+preamble_action : ACTIONS COLON INT
+                | ACTIONS COLON name_list
+                ;
+
+preamble_obs : OBSERVATIONS COLON INT
+             | OBSERVATIONS COLON name_list
+             ;
+
+name_list : name_list STRING
+          | STRING
+          ;
+
+start_state : START COLON UNIFORM
+            | START COLON RESET
+            | START COLON pmatrix
+            | START COLON state
+            | START INCLUDE COLON state_list
+            | START EXCLUDE COLON state_list
+            ;
+
+state_list : state_list state
+           | state
+           ;
+
+state : INT
+      | STRING
+      | ASTERISK
+      ;
+
+action : INT
+       | STRING
+       | ASTERISK
+       ;
+
+obs : INT
+    | STRING
+    | ASTERISK
+    ;
+
+pmatrix : pmatrix prob
+        | prob prob
+        ;
+
+nmatrix : nmatrix number
+        | number
+        ;
+
+structure_list : structure_list t_structure
+               | structure_list o_structure
+               | structure_list r_structure
+               |
+               ;
+
+t_structure : T COLON action COLON state COLON state prob
+            | T COLON action COLON state UNIFORM
+            | T COLON action COLON state RESET
+            | T COLON action COLON state pmatrix
+            | T COLON action UNIFORM
+            | T COLON action IDENTITY
+            | T COLON action pmatrix
+            ;
+
+o_structure : O COLON action COLON state COLON obs prob
+            | O COLON action COLON state UNIFORM
+            | O COLON action COLON state RESET
+            | O COLON action COLON state pmatrix
+            | O COLON action UNIFORM
+            | O COLON action RESET
+            | O COLON action pmatrix
+            ;
+
+r_structure : R COLON action COLON state COLON state COLON obs number
+            | R COLON action COLON state COLON state nmatrix
+            | R COLON action COLON state nmatrix
+            ;
+
+prob : FLOAT
+     | INT
+     ;
+
+number : FLOAT
+       | INT
+       ;
+
+number : PLUS number
+       | MINUS number
+       ;
