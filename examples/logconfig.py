@@ -4,7 +4,7 @@ LOGGING = {
 
     'formatters': {
         'simple': {
-            'format': '{name:<12} {levelname:<8} {message}',
+            'format': '{levelname:<8} {name:<12} \t {message}',
             'style': '{',
         },
     },
@@ -29,10 +29,15 @@ LOGGING = {
     },
 
     'loggers': {
-        'rl.pomdp.agents.pgradient': {
+        'rl.pomdp.policies': {
             'handlers': ['file'],
-            'level': 'INFO',
+            'level': 'DEBUG',
             'propagate': True,
         },
+        # 'rl.pomdp.agents.pgradient': {
+        #     'handlers': ['file'],
+        #     'level': 'INFO',
+        #     'propagate': True,
+        # },
     },
 }
