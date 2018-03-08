@@ -22,7 +22,7 @@ setup(
     packages=['rl'],
     package_dir={'':'src'},
 
-    package_data={'rl': ['data/pomdps/*.pomdp']},
+    package_data={'rl': ['data/pomdp/*.pomdp', 'data/fsc/*.fsc']},
     include_package_data=True,
 
     scripts=['scripts/rl-pomdps', 'scripts/rl-fscs'],

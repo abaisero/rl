@@ -355,7 +355,7 @@ _open = open  # saving default name
 @contextmanager
 def open(fname):
     try:
-        f = _open(fname)
+        f = _open(f'{fname}.pomdp')
     except FileNotFoundError:
         fname = resource_filename('rl', f'data/pomdp/{fname}.pomdp')
         f = _open(fname)
