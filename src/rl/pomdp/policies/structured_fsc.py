@@ -1,3 +1,6 @@
+import logging
+logger = logging.getLogger(__name__)
+
 from .policy import Policy
 import rl.graph as graph
 
@@ -15,6 +18,8 @@ IFeedback = namedtuple('IFeedback', 'n1')
 
 
 class StructuredFSC(Policy):
+    logger = logging.getLogger(f'{__name__}.StructuredFSC')
+
     def __init__(self, env, amask, nmask, n0):
         super().__init__(env)
 
@@ -84,11 +89,17 @@ class StructuredFSC(Policy):
         return IContext(self.n)
 
     def feedback(self, feedback):
-        return self.feedback_o(feedback.o)
+        ifeedback = self.feedback_o(feedback.o)
+        self.logger.debug(f'feedback({feedback}) -> {ifeedback}')
+        return ifeedback
 
     def feedback_o(self, o):
-        self.n = self.nmodel.sample(self.n, o)
-        return IFeedback(n1=self.n)
+        n1 = self.nmodel.sample(self.n, o)
+        ifeedback = IFeedback(n1=n1)
+        self.logger.debug(f'feedback_o(o) + {self.n} -> {ifeedback}')
+
+        self.n = n1
+        return ifeedback
 
     def dist(self):
         return self.amodel.dist(self.n)
@@ -98,6 +109,7 @@ class StructuredFSC(Policy):
 
     def sample(self):
         self.a = self.amodel.sample(self.n)
+        self.logger.debug(f'sample() + {self.n} -> {self.a}')
         return self.a
 
     def plot(self, nepisodes):

@@ -18,16 +18,18 @@ class PolicyGradient(Agent):
         self.step_size = step_size
 
     def reset(self):
+        self.logger.debug('reset()')
         self.policy.reset()
         self.pgrad.reset()
         self.step_size.reset()
 
     def restart(self):
+        self.logger.debug('restart()')
         self.policy.restart()
         self.pgrad.restart()
 
     def feedback(self, sys, context, a, feedback):
-        self.logger.debug(f'feedback() \t; {context} \t; a={a} \t; {feedback}')
+        self.logger.info(f'feedback() \t; {context} \t; a={a} \t; {feedback}')
 
         try:
             try:
@@ -48,7 +50,7 @@ class PolicyGradient(Agent):
             self.policy.feedback(feedback)
 
     def feedback_episode(self, sys, episode):
-        self.logger.debug(f'feedback_episode() \t; len(episode)={len(episode)}')
+        self.logger.info(f'feedback_episode() \t; len(episode)={len(episode)}')
 
         try:
             pgrad_feedback_episode = self.pgrad.feedback_episode
