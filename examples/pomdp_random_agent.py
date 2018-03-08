@@ -107,7 +107,9 @@ if __name__ == '__main__':
 
     # Structured Istate-GPOMDP (params N and beta)
 
-    fscname = 'tiger.mini'
+    fscname = 'tiger.lin.1'  # early success
+    fscname = 'tiger.lin.2'  # late success
+    fscname = 'tiger.lin.3'  #
     policy = dotfsc.fsc(fscname, env)
     pg = psearch.IsGPOMDP(policy, beta)
     name = f'IsGPOMDP (N={N}, $\\beta$={beta})'
@@ -167,6 +169,7 @@ if __name__ == '__main__':
 
         idx_results = i * nepisodes
         idx_gnorms = i * nepisodes
+
 
         # NOTE if this is outside I have a bug
         @Callback
