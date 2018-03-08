@@ -32,22 +32,20 @@ class PolicyGradient(Agent):
         self.logger.info(f'feedback() \t; {context} \t; a={a} \t; {feedback}')
 
         try:
-            try:
-                pgrad_feedback = self.pgrad.feedback
-            except AttributeError:
-                return
-
-            dparams = pgrad_feedback(sys, context, a, feedback)
-            try:
-                dparams *= self.step_size()
-            except TypeError:
-                return
-            else:
-                self.step_size.step()
-
-            self.policy.params += dparams
-        finally:
+            pgrad_feedback = self.pgrad.feedback
+        except AttributeError:
             self.policy.feedback(feedback)
+            return
+
+        dparams = pgrad_feedback(sys, context, a, feedback)
+        try:
+            dparams *= self.step_size()
+        except TypeError:
+            return
+        else:
+            self.step_size.step()
+
+        self.policy.params += dparams
 
     def feedback_episode(self, sys, episode):
         self.logger.info(f'feedback_episode() \t; len(episode)={len(episode)}')
