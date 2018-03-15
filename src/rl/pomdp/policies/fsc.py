@@ -1,6 +1,9 @@
 from .policy import Policy
 import rl.graph as graph
 
+import argparse
+from rl.misc.argparse import GroupedAction
+
 import pytk.factory as factory
 import pytk.factory.model as fmodel
 
@@ -107,3 +110,17 @@ class FSC(Policy):
 
         if self.idx == self.neps:
             self.q.put(None)
+
+
+    @staticmethod
+    def parser(group=None):
+        def group_fmt(dest):
+            return dest if group is None else f'{group}.{dest}'
+
+        parser = argparse.ArgumentParser(add_help=False)
+        parser.add_argument(dest=group_fmt('n'), metavar='n', type=int, action=GroupedAction, default=argparse.SUPPRESS)
+        return parser
+
+    @staticmethod
+    def from_namespace(env, namespace):
+        return FSC(env, namespace.n)

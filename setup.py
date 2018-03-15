@@ -27,7 +27,7 @@ setup(
 
     scripts=['scripts/rl-pomdps', 'scripts/rl-fscs'],
 
-    install_requires=['numpy', 'scipy'],  #  GPy, pytk
+    install_requires=['python>=3', 'numpy', 'scipy'],  #  GPy, pytk
     license='MIT',
     test_suite='tests',
 )

@@ -4,6 +4,9 @@ logger = logging.getLogger(__name__)
 from .policy import Policy
 import rl.graph as graph
 
+import argparse
+from rl.misc.argparse import GroupedAction
+
 import pytk.factory as factory
 import pytk.factory.model as fmodel
 
@@ -20,7 +23,7 @@ IFeedback = namedtuple('IFeedback', 'n1')
 class StructuredFSC(Policy):
     logger = logging.getLogger(f'{__name__}.StructuredFSC')
 
-    def __init__(self, env, amask, nmask, n0):
+    def __init__(self, env, nfactory, n0, amask, nmask):
         super().__init__(env)
 
         if not amask.shape[0] == env.nactions:
@@ -28,16 +31,11 @@ class StructuredFSC(Policy):
         if not amask.shape[1] == nmask.shape[0] == nmask.shape[1]:
             raise ValueError(f'Action mask shape {amask.shape} and/or node mask shape {nmask.shape} is wrong.')
 
+        self.nfactory = nfactory
+        self.n0 = nfactory.item(n0)
+
         self.amask = amask
         self.nmask = nmask
-        self.N = amask.shape[1]
-
-        # TODO get nfactory from outside, even?
-        # TODO I want to get these directly from the outside...
-        values = [f'node_{i}' for i in range(self.N)]
-        # self.nfactory = factory.FactoryN(N)
-        self.nfactory = factory.FactoryValues(values)
-        self.n0 = self.nfactory.item(n0)
 
         self.amodel = fmodel.Softmax(env.afactory, cond=(self.nfactory,))
         self.nmodel = fmodel.Softmax(self.nfactory, cond=(self.nfactory, env.ofactory))
@@ -72,6 +70,32 @@ class StructuredFSC(Policy):
         self.amodel.params[~self.amask.T] = -np.inf
         nmask = np.stack([self.nmask] * self.env.nobs, axis=1)
         self.nmodel.params[~nmask.T] = -np.inf
+
+        # _p = 10
+        # self.nmodel.params[1, 0, 0] = -_p
+        # self.nmodel.params[1, 1, 0] = _p
+        # self.nmodel.params[1, 0, 2] = _p
+        # self.nmodel.params[1, 1, 2] = -_p
+
+        # self.nmodel.params[2, 0, 1] = -_p
+        # self.nmodel.params[2, 1, 1] = _p
+        # self.nmodel.params[2, 0, 3] = _p
+        # self.nmodel.params[2, 1, 3] = -_p
+
+        # self.nmodel.params[3, 0, 2] = -_p
+        # self.nmodel.params[3, 1, 2] = _p
+        # self.nmodel.params[3, 0, 4] = _p
+        # self.nmodel.params[3, 1, 4] = -_p
+
+        # self.nmodel.params[4, 0, 3] = -_p
+        # self.nmodel.params[4, 1, 3] = _p
+        # self.nmodel.params[4, 0, 5] = _p
+        # self.nmodel.params[4, 1, 5] = -_p
+
+        # self.nmodel.params[5, 0, 4] = -_p
+        # self.nmodel.params[5, 1, 4] = _p
+        # self.nmodel.params[5, 0, 6] = _p
+        # self.nmodel.params[5, 1, 6] = -_p
 
     def restart(self):
         self.n = self.n0.copy()
@@ -129,3 +153,81 @@ class StructuredFSC(Policy):
 
         if self.idx == self.neps:
             self.q.put(None)
+
+    @staticmethod
+    def from_dotfss(self):
+        pass
+
+    @staticmethod
+    def parser(group=None):
+        def group_fmt(dest):
+            return dest if group is None else f'{group}.{dest}'
+
+        parser = argparse.ArgumentParser(add_help=False)
+        parser.add_argument(dest=group_fmt('fss'), metavar='fss', action=GroupedAction, default=argparse.SUPPRESS)
+        return parser
+
+    @staticmethod
+    def from_fss(env, fname):
+        with _open(fname) as f:
+            dotfss = parse(f.read())
+
+        # TODO check that all actions are used
+        # TODO check that structure fully connected
+        # TODO check that the actions are the same
+
+        if isinstance(dotfss.nodes[0], str):
+            nodes = dotfss.nodes
+        else:
+            nodes = tuple(f'node_{n}' for n in dotfss.nodes)
+
+        nfactory = factory.FactoryValues(nodes)
+        amask = dotfss.A.T
+        nmask = dotfss.N.T
+
+        return StructuredFSC(env, nfactory, dotfss.start, amask, nmask)
+
+    @staticmethod
+    def from_namespace(env, namespace):
+        return StructuredFSC.from_fss(env, namespace.fss)
+
+
+
+
+from contextlib import contextmanager
+from pkg_resources import resource_filename
+
+from rl_parsers.fss import parse
+
+
+@contextmanager
+def _open(fname):
+    try:
+        f = open(fname)
+    except FileNotFoundError:
+        fname = resource_filename('rl', f'data/fss/{fname}')
+        f = open(fname)
+
+    yield f
+    f.close()
+
+
+# def parse_dotfss(fname, env):
+#     with _open(fname) as f:
+#         dotfss = parse(f.read())
+
+#     # TODO check that all actions are used
+#     # TODO check that structure fully connected
+#     # TODO check that the actions are the same
+
+#     if isinstance(dotfss.nodes[0], str):
+#         nodes = dotfss.nodes
+#     else:
+#         nodes = tuple(f'node_{n}' for n in dotfss.nodes)
+
+#     nfactory = factory.FactoryValues(nodes)
+#     amask = dotfss.A.T
+#     nmask = dotfss.N.T
+
+#     fsc = StructuredFSC(env, nfactory, dotfss.start, amask, nmask)
+#     return fsc

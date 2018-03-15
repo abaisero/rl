@@ -93,3 +93,7 @@ class Reactive(Policy):
 
         if self.idx == self.neps:
             self.q.put(None)
+
+    @staticmethod
+    def add_to_parser(parser):
+        pass
