@@ -188,15 +188,18 @@ if __name__ == '__main__':
 
     v = mp.RawValue('i', 0)
     l = mp.Lock()
+
+    seed0 = int(time.time() * 1000) % 2**32
+
     def run(ri):
         with l:
             # true sequential index
             i = v.value
             v.value += 1
 
-        seed = int(time.time() * 1000 + i * 61001) % 2 ** 32
+        # seed = int(time.time() * 1000 + i * 61001) % 2 ** 32
+        seed = seed0 + i
         print(f'Starting run {i+1} / {nruns};  Running {nepisodes} episodes... (with seed {seed})')
-
         rnd.seed(seed)  # ensure different randomization
 
         idx_offset = i * nepisodes
