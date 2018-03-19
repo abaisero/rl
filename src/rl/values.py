@@ -13,7 +13,7 @@ from rl.learning import LearningRate_geom, LearningRate_const
 
 from rl.problems import taction, SAPair
 
-from pytk.util import argmax
+from pytk.optim import argmax
 from pytk.more_collections import defaultdict_noinsert
 
 
@@ -238,14 +238,14 @@ class Values(object):
             raise ValuesException('ValueType ({}) unknown or unfeasible for this method.'.format(self.vtype))
 
     def optim_actions_sa(self, s, actions):
-        return argmax(lambda a: self.value_sa(s, a), actions, all_=True)
+        return argmax(lambda a: self.value_sa(s, a), actions, every=True)
 
     def optim_actions_s(self, s, actions, model):
         def value(s0, a):
             dist_s1 = model.s1model.dist_s1(s0, a)
             return sum(pr_s1 * (model.rmodel.E_r(s0, a, s1) + model.gamma * self.value(s1)) for s1, pr_s1 in dist_s1.items())
 
-        return argmax(lambda a: value(s, a), actions, all_=True)
+        return argmax(lambda a: value(s, a), actions, every=True)
 
     def optim_actions_a(self, actions):
         return self.optim_actions_sa(None, actions)

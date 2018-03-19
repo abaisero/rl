@@ -5,7 +5,7 @@ from rl.problems.bandits.cb import ContextualBandit, CBModel, CB
 from rl.values import Values_TabularCounted
 from rl.policy.policy import Policy_UCB
 
-import pytk.factory as factory
+import indextools
 
 
 nsides = 6
@@ -14,23 +14,12 @@ def roll():
 
 
 values = list(range(1, nsides+1))
-sfactory = factory.FactoryChoice(values)
-
-
-# class DiceState(State):
-#     def __init__(self, npips):
-#         # TODO I used to do this because I needed a hash to index in a table..  If I use a factory, I can just use the index!!
-#         self.setkey((npips,))
-
-#         self.npips = npips
-
-#     def __str__(self):
-#         return f'S(npips={self.npips})'
+sspace = indextools.DomainSpace(values)
 
 
 class DiceModel(CBModel):
     def sample_s0(self):
-        return sfactory.item(value=roll())
+        return sspace.item(value=roll())
         # return DiceState(roll())
 
 
@@ -82,14 +71,12 @@ if __name__ == '__main__':
     print()
     print('final values')
     for npips in values:
-        # s = DiceState(i)
-        s = sfactory.item(value=npips)
+        s = sspace.item(value=npips)
         for b in bandits:
             print(f'{s} {b}: {Q(s, b):.2f} {Q.confidence(s, b):.2f}')
 
     print()
     print('optim actions')
     for npips in values:
-        # s = DiceState(i)
-        s = sfactory.item(value=npips)
+        s = sspace.item(value=npips)
         print(f'{s}: {Q.optim_action(s, cb.actionlist)}')

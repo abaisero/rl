@@ -19,7 +19,7 @@ class DataThread(QtCore.QThread):
     def run(self):
         for idx, a0dist, adist in iter(self.q.get, None):
             self.data[idx, :, 0] = a0dist
-            self.data[idx, :, 1:] = adist.T
+            self.data[idx, :, 1:] = adist
 
 
 def process_target(q, nepisodes, alabels, olabels):
@@ -51,8 +51,8 @@ def process_target(q, nepisodes, alabels, olabels):
 
 
 def reactiveplot(reactive, nepisodes):
-    alabels = reactive.env.afactory.values
-    olabels = reactive.env.ofactory.values
+    alabels = reactive.env.aspace.values
+    olabels = reactive.env.ospace.values
 
     q = mp.Queue()
     p = mp.Process(target=process_target, args=(q, nepisodes, alabels, olabels))

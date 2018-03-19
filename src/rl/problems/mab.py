@@ -2,16 +2,16 @@ from . import Model_
 
 
 class Environment:
-    def __init__(self, afactory):
-        self.afactory = afactory
+    def __init__(self, aspace):
+        self.aspace = aspace
 
     @property
     def actions(self):
-        return self.afactory.items
+        return self.aspace.elems
 
     @property
     def nactions(self):
-        return self.afactory.nitems
+        return self.aspace.nelems
 
 
 class RewardModel(Model_):
@@ -49,7 +49,7 @@ class Model:
         self.env = env
         self.r = rmodel
 
-    # TODO how to combine factory design with current bandit design?
+    # TODO how to combine space design with current bandit design?
 
     @property
     def max_r(self):

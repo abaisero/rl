@@ -1,12 +1,12 @@
 from .policy import Policy
 
-import pytk.factory.model as fmodel
+import rl.misc.models as models
 
 
 class Blind(Policy):
     def __init__(self, env):
         super().__init__(env)
-        self.amodel = fmodel.Softmax(env.afactory)
+        self.amodel = models.Softmax(env.aspace)
 
     def reset(self):
         self.amodel.reset()

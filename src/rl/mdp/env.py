@@ -5,38 +5,38 @@
 # or not
 
 class Environment:
-    def __init__(self, sfactory, afactory, tfactory=None):
-        self.sfactory = sfactory
-        self.afactory = afactory
+    def __init__(self, sspace, aspace, tspace=None):
+        self.sspace = sspace
+        self.aspace = aspace
         # TODO how to handle distributions?  joint / union space?
-        self.tfactory = tfactory
+        self.tspace = tspace
 
-        self.episodic = tfactory is not None
-        self.continuous = tfactory is None
+        self.episodic = tspace is not None
+        self.continuous = tspace is None
 
     def isterminal(self, state):
-        return self.tfactory.isitem(state)
+        return self.tspace.isitem(state)
 
     @property
     def states(self):
-        return self.sfactory.items
+        return self.sspace.elems
 
     @property
     def nstates(self):
-        return self.sfactory.nitems
+        return self.sspace.nelems
 
     @property
     def tstates(self):
-        return self.tfactory.items
+        return self.tspace.elems
 
     @property
     def ntstates(self):
-        return self.tfactory.nitems
+        return self.tspace.nelems
 
     @property
     def actions(self):
-        return self.afactory.items
+        return self.aspace.elems
 
     @property
     def nactions(self):
-        return self.afactory.nitems
+        return self.aspace.nelems

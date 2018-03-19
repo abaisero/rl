@@ -1,7 +1,7 @@
 from .policy import Policy
 import rl.graph as graph
 
-import pytk.factory.model as fmodel
+import rl.misc.models as models
 
 from collections import namedtuple
 import numpy as np
@@ -16,8 +16,8 @@ class Reactive(Policy):
         super().__init__(env)
         # TODO create node set? as extension of observation space?
 
-        self.a0model = fmodel.Softmax(env.afactory)
-        self.amodel = fmodel.Softmax(env.afactory, cond=(env.ofactory,))
+        self.a0model = models.Softmax(env.aspace)
+        self.amodel = models.Softmax(env.aspace, cond=[env.ospace])
         # TODO look at pgradient;  this won't work for some reason
         # self.params = self.amodel.params
 
@@ -36,7 +36,7 @@ class Reactive(Policy):
     def dlogprobs(self, t, o, a):
         dlogprobs = np.empty(2, dtype=object)
         if t == 0:
-            dlogprobs[0] = self.a0model.dlogprobs(o, a)
+            dlogprobs[0] = self.a0model.dlogprobs(a)
             dlogprobs[1] = 0
         else:
             dlogprobs[0] = 0

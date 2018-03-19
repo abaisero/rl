@@ -71,9 +71,9 @@ def process_target(q, nepisodes, alabels, nlabels, olabels):
 
 
 def fscplot(fsc, nepisodes):
-    alabels = fsc.env.afactory.values
-    nlabels = fsc.nfactory.values
-    olabels = fsc.env.ofactory.values
+    alabels = tuple(fsc.env.aspace.values)
+    nlabels = tuple(fsc.nspace.values)
+    olabels = tuple(fsc.env.ospace.values)
 
     q = mp.Queue()
     p = mp.Process(target=process_target, args=(q, nepisodes, alabels, nlabels, olabels))

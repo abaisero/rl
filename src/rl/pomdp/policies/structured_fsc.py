@@ -7,8 +7,8 @@ import rl.graph as graph
 import argparse
 from rl.misc.argparse import GroupedAction
 
-import pytk.factory as factory
-import pytk.factory.model as fmodel
+import indextools
+import rl.misc.models as models
 
 from collections import namedtuple
 import numpy as np
@@ -23,7 +23,7 @@ IFeedback = namedtuple('IFeedback', 'n1')
 class StructuredFSC(Policy):
     logger = logging.getLogger(f'{__name__}.StructuredFSC')
 
-    def __init__(self, env, nfactory, n0, amask, nmask):
+    def __init__(self, env, nspace, n0, amask, nmask):
         super().__init__(env)
 
         if not amask.shape[0] == env.nactions:
@@ -31,14 +31,14 @@ class StructuredFSC(Policy):
         if not amask.shape[1] == nmask.shape[0] == nmask.shape[1]:
             raise ValueError(f'Action mask shape {amask.shape} and/or node mask shape {nmask.shape} is wrong.')
 
-        self.nfactory = nfactory
-        self.n0 = nfactory.item(n0)
+        self.nspace = nspace
+        self.n0 = nspace.elem(n0)
 
         self.amask = amask
         self.nmask = nmask
 
-        self.amodel = fmodel.Softmax(env.afactory, cond=(self.nfactory,))
-        self.nmodel = fmodel.Softmax(self.nfactory, cond=(self.nfactory, env.ofactory))
+        self.amodel = models.Softmax(env.aspace, cond=(self.nspace,))
+        self.nmodel = models.Softmax(self.nspace, cond=(self.nspace, env.ospace))
         # TODO I think I want this sparsity to happen directly in a sparse fmodel
 
         # TODO look at pgradient;  this won't work for some reason
@@ -61,6 +61,7 @@ class StructuredFSC(Policy):
     def dlogprobs(self, n, a, o, n1):
         dlogprobs = np.empty(2, dtype=object)
         dlogprobs[0] = self.amodel.dlogprobs(n, a)
+        # print(dlogprobs[0].shape)
         dlogprobs[1] = self.nmodel.dlogprobs(n, o, n1)
         return dlogprobs
 
@@ -102,11 +103,11 @@ class StructuredFSC(Policy):
 
     @property
     def nodes(self):
-        return self.nfactory.items
+        return self.nspace.elems
 
     @property
     def nnodes(self):
-        return self.nfactory.nitems
+        return self.nspace.nelems
 
     @property
     def context(self):
@@ -181,11 +182,11 @@ class StructuredFSC(Policy):
         else:
             nodes = tuple(f'node_{n}' for n in dotfss.nodes)
 
-        nfactory = factory.FactoryValues(nodes)
+        nspace = indextools.DomainSpace(nodes)
         amask = dotfss.A.T
         nmask = dotfss.N.T
 
-        return StructuredFSC(env, nfactory, dotfss.start, amask, nmask)
+        return StructuredFSC(env, nspace, dotfss.start, amask, nmask)
 
     @staticmethod
     def from_namespace(env, namespace):
@@ -210,24 +211,3 @@ def _open(fname):
 
     yield f
     f.close()
-
-
-# def parse_dotfss(fname, env):
-#     with _open(fname) as f:
-#         dotfss = parse(f.read())
-
-#     # TODO check that all actions are used
-#     # TODO check that structure fully connected
-#     # TODO check that the actions are the same
-
-#     if isinstance(dotfss.nodes[0], str):
-#         nodes = dotfss.nodes
-#     else:
-#         nodes = tuple(f'node_{n}' for n in dotfss.nodes)
-
-#     nfactory = factory.FactoryValues(nodes)
-#     amask = dotfss.A.T
-#     nmask = dotfss.N.T
-
-#     fsc = StructuredFSC(env, nfactory, dotfss.start, amask, nmask)
-#     return fsc

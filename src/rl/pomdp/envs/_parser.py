@@ -16,7 +16,7 @@ def _open(fname):
     f.close()
 
 
-import pytk.factory as factory
+import indextools
 import rl.pomdp as pomdp
 import numpy as np
 
@@ -32,11 +32,11 @@ def env(fname):
     if np.any(dotpomdp.R.mean(axis=-1, keepdims=True) != dotpomdp.R):
         raise ValueError('I cannot handle rewards which depend on observations.')
 
-    sfactory = factory.FactoryValues(dotpomdp.states)
-    afactory = factory.FactoryValues(dotpomdp.actions)
-    ofactory = factory.FactoryValues(dotpomdp.observations)
+    sspace = indextools.DomainSpace(dotpomdp.states)
+    aspace = indextools.DomainSpace(dotpomdp.actions)
+    ospace = indextools.DomainSpace(dotpomdp.observations)
 
-    env = pomdp.Environment(sfactory, afactory, ofactory)
+    env = pomdp.Environment(sspace, aspace, ospace)
     env.gamma = dotpomdp.discount
 
     if dotpomdp.start is None:

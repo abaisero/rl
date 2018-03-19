@@ -1,5 +1,5 @@
 import rl.mdp as mdp
-import pytk.factory as factory
+import indextools
 
 import numpy as np
 import numpy.random as rnd
@@ -43,7 +43,7 @@ class Gridworld_S1Model(mdp.State1Distribution):
         else:
             s1 = T(s.value, a.value)
 
-        yield self.env.sfactory.item(value=s1), 1.
+        yield self.env.sspace.elem(value=s1), 1.
         # yield s1, 1.
 
 
@@ -62,15 +62,15 @@ class Gridworld_RModel(mdp.RewardDistribution):
 def Gridworld():
     # TODO avoid naive way!  or maybe not?  I want positions are tuples!
     svalues = [State((i, j)) for i in range(n) for j in range(n)]
-    sfactory = factory.FactoryValues(svalues)
-    sfactory.istr = lambda s: str(s.value.pos)
+    sspace = indextools.DomainSpace(svalues)
+    # sspace.istr = lambda s: str(s.value.pos)
     # NOTE namedtuple takes care of map to string
 
     avalues = 'north', 'south', 'east', 'west'
-    afactory = factory.FactoryValues(avalues)
-    # afactory.istr = lambda a: f'Action({a.value})'
+    aspace = indextools.DomainSpace(avalues)
+    # aspace.istr = lambda a: f'Action({a.value})'
 
-    env = mdp.Environment(sfactory, afactory)
+    env = mdp.Environment(sspace, aspace)
     env.gamma = 1
     env.n = n
 

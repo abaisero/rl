@@ -13,7 +13,7 @@ from rl.values import Values_Tabular
 # from rl.algo.dp import policy_iteration, value_iteration
 from rl.algo.dp import ValueIteration
 
-import pytk.factory as factory
+import indextools
 
 import rl.problems.models.mdp as mdp
 
@@ -24,16 +24,13 @@ if __name__ == '__main__':
     goal = 100
     coinp = .4
 
-    svalues = list(range(goal+1))
-    sfactory = factory.FactoryChoice(svalues)
-
-    avalues = list(range(1, goal+1))
-    afactory = factory.FactoryChoice(avalues)
+    sspace = indextools.RangeSpace(goal+1)
+    aspace = indextools.RangeSpace(1, goal+1)
 
 
     def viability(s, a):
         return a.value <= s.value
-    env = mdp.Environment(sfactory, afactory, viability)
+    env = mdp.Environment(sspace, aspace, viability)
 
     # TODO how to handle actions which don't really make sense in a certain state?
     # consider also general POMDP case where we don't know the state.... sooooo
@@ -55,11 +52,11 @@ if __name__ == '__main__':
             return dist
 
         s1value = np.clip(s0.value+a.value, 0, goal)
-        s1 = sfactory.item(value=s1value)
+        s1 = sspace.elem(value=s1value)
         dist[s1] = coinp
 
         s1value = np.clip(s0.value-a.value, 0, goal)
-        s1 = sfactory.item(value=s1value)
+        s1 = sspace.elem(value=s1value)
         dist[s1] = 1 - coinp
 
         return dist
@@ -118,9 +115,9 @@ if __name__ == '__main__':
     #     def pr_s1(self, s0, a, s1=None):
     #         pr_dict = defaultdict(int)
     #         s1value = np.clip(0, s0.value + a.cash, goal)
-    #         pr_dict[sfactory.item(value=s1value)] = self.coinp
+    #         pr_dict[sspace.elem(value=s1value)] = self.coinp
     #         s1value = np.clip(0, s0.value - a.cash, goal)
-    #         pr_dict[sfactory.item(value=s1value)] = 1 - self.coinp
+    #         pr_dict[sspace.elem(value=s1value)] = 1 - self.coinp
     #         return pr_dict if s1 is None else pr_dict[s1]
 
     #     def E_r(self, s0, a, s1):
@@ -134,7 +131,7 @@ if __name__ == '__main__':
     #         self.coinp = coinp
 
     #         # self.statelist = [GamblerState(cash, goal) for cash in range(0, self.goal + 1)]
-    #         self.statelist = list(sfactory.items)
+    #         self.statelist = list(sspace.elems)
     #         self.actionlist = [GamblerAction(cash) for cash in range(1, self.goal)]
 
     #     @memoizemethod

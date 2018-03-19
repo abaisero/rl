@@ -1,5 +1,5 @@
 import rl.pomdp as pomdp
-import pytk.factory as factory
+import indextools
 
 import numpy.random as rnd
 
@@ -31,15 +31,15 @@ class Tiger_OModel(pomdp.ObsDistribution):
 
     def dist(self, s0, a, s1):
         if a != 'listen':
-            yield self.env.ofactory.item(value='none'), 1.
+            yield self.env.ospace.elem(value='none'), 1.
         else:
             if s0 == 'tiger-left':
                 otrue, ofalse = 'hear-tiger-left', 'hear-tiger-right'
             else:
                 otrue, ofalse = 'hear-tiger-right', 'hear-tiger-left'
 
-            yield self.env.ofactory.item(value=otrue), 1-self.e
-            yield self.env.ofactory.item(value=ofalse), self.e
+            yield self.env.ospace.elem(value=otrue), 1-self.e
+            yield self.env.ospace.elem(value=ofalse), self.e
 
 
 class Tiger_RModel(pomdp.RewardDistribution):
@@ -55,20 +55,16 @@ class Tiger_RModel(pomdp.RewardDistribution):
 
 
 def Tiger(e=.2):
-
     svalues = 'tiger-left', 'tiger-right'
-    sfactory = factory.FactoryValues(svalues)
-    sfactory.istr = lambda item: f'State({item.value})'
+    sspace = indextools.DomainSpace(svalues)
 
     avalues = 'listen', 'open-left', 'open-right'
-    afactory = factory.FactoryValues(avalues)
-    afactory.istr = lambda item: f'Action({item.value})'
+    aspace = indextools.DomainSpace(avalues)
 
     ovalues = 'hear-tiger-left', 'hear-tiger-right', 'none'
-    ofactory = factory.FactoryValues(ovalues)
-    ofactory.istr = lambda item: f'Obs({item.value})'
+    ospace = indextools.DomainSpace(ovalues)
 
-    env = pomdp.Environment(sfactory, afactory, ofactory)
+    env = pomdp.Environment(sspace, aspace, ospace)
 
     s0model = Tiger_S0Model(env)
     s1model = Tiger_S1Model(env)

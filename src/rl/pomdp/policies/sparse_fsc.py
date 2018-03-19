@@ -4,8 +4,9 @@ import rl.graph as graph
 import argparse
 from rl.misc.argparse import GroupedAction
 
-import pytk.factory as factory
-import pytk.factory.model as fmodel
+import indextools
+import rl.misc.models as models
+
 
 from collections import namedtuple
 import numpy as np
@@ -23,16 +24,15 @@ class SparseFSC(Policy):
         self.N = N  # number of nodes
         self.K = K
 
-        values = [f'node_{i}' for i in range(N)]
-        # self.nfactory = factory.FactoryN(N)
-        self.nfactory = factory.FactoryValues(values)
-        self.kfactory = factory.FactoryN(K)
+        nodes = [f'node_{i}' for i in range(N)]
+        # self.nspace = indextools.RangeSpace(K)
+        self.nspace = indextools.DomainSpace(nodes)
+        self.kspace = indextools.RangeSpace(K)
 
         # TODO first node should probably not be sparse..
 
-        self.amodel = fmodel.Softmax(env.afactory, cond=(self.nfactory,))
-        self.kmodel = fmodel.Softmax(self.kfactory, cond=(self.nfactory, env.ofactory))
-        # TODO I think I want this sparsity to happen directly in a sparse fmodel
+        self.amodel = models.Softmax(env.aspace, cond=(self.nspace,))
+        self.kmodel = models.Softmax(self.kspace, cond=(self.nspace, env.ospace))
 
         I = np.eye(N, dtype=np.int)
         fail = 0
@@ -72,11 +72,11 @@ class SparseFSC(Policy):
     def nk2n(self, n, k):
         #  I thought it should have been [:, k.i, n.i]...
         n1i = self.nkn[:, k.i, n.i].nonzero()[0].item()
-        return self.nfactory.item(n1i)
+        return self.nspace.elem(n1i)
 
     def nn2k(self, n, n1):
         k1i = self.nkn[n1.i, :, n.i].nonzero()[0].item()
-        return self.kfactory.item(k1i)
+        return self.kspace.elem(k1i)
 
     def dlogprobs(self, n, a, o, n1):
         dlogprobs = np.empty(2, dtype=object)
@@ -90,15 +90,15 @@ class SparseFSC(Policy):
         self.kmodel.reset()
 
     def restart(self):
-        self.n = self.nfactory.item(0)
+        self.n = self.nspace.elem(0)
 
     @property
     def nodes(self):
-        return self.nfactory.items
+        return self.nspace.nelems
 
     @property
     def nnodes(self):
-        return self.nfactory.nitems
+        return self.nspace.nelems
 
     @property
     def context(self):
@@ -129,11 +129,13 @@ class SparseFSC(Policy):
 
     def plot_update(self):
         adist = self.amodel.probs()
-        adist /= adist.sum(axis=-1, keepdims=True)
+        # NOTE this was just for bug
+        # adist /= adist.sum(axis=-1, keepdims=True)
 
         kdist = self.kmodel.probs()
-        kdist /= kdist.sum(axis=-1, keepdims=True)
-        ndist = np.einsum('nok,mkn->nom', kdist, self.nkn)
+        # NOTE this was just for bug
+        # kdist /= kdist.sum(axis=-1, keepdims=True)
+        ndist = np.einsum('nok,mkn->mon', kdist, self.nkn)
 
         self.q.put((self.idx, adist, ndist))
         self.idx += 1

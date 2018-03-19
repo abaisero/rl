@@ -2,12 +2,12 @@
 # encoding: utf-8
 
 import os
-from setuptools import setup, find_packages
+from setuptools import setup
 
 
-def read(fname):
-    """Utility function to read the README file."""
-    return open(os.path.join(os.path.dirname(__file__), fname)).read()
+# def read(fname):
+#     """Utility function to read the README file."""
+#     return open(os.path.join(os.path.dirname(__file__), fname)).read()
 
 
 setup(
@@ -27,7 +27,7 @@ setup(
 
     scripts=['scripts/rl-pomdps', 'scripts/rl-fscs'],
 
-    install_requires=['python>=3', 'numpy', 'scipy'],  #  GPy, pytk
+    install_requires=['numpy', 'scipy'],  #  GPy, pytk
     license='MIT',
     test_suite='tests',
 )

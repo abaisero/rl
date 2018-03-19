@@ -8,9 +8,9 @@ logger = logging.getLogger(__name__)
 class Tabular(Q):
     def __init__(self, env):
         super().__init__(env)
-        self.qmodel = fmodels.Tabular((env.sfactory, env.afactory), 0.)
-        # self.fvalues = fmodels.Tabular((env.sfactory, env.afactory), 0.)
-        # self.fcounts = fmodels.Tabular((env.sfactory, env.afactory), 0)
+        self.qmodel = fmodels.Tabular((env.sspace, env.aspace), 0.)
+        # self.fvalues = fmodels.Tabular((env.sspace, env.aspace), 0.)
+        # self.fcounts = fmodels.Tabular((env.sspace, env.aspace), 0)
 
     def counts(self):
         return TabularCounts(self.env)
@@ -55,16 +55,16 @@ class Tabular(Q):
 # class Tabular_l(Q):
 #     def __init__(self, env, alpha, gamma, l):
 #         super().__init__(env)
-#         self.fmodel = fmodels.Tabular_l((env.sfactory, env.afactory), alpha, gamma, l)
+#         self.fmodel = fmodels.Tabular_l((env.sspace, env.aspace), alpha, gamma, l)
 
 
 class TabularCounts(Counts):
     def __init__(self, env):
         super().__init__()
-        self.cmodel = fmodels.Tabular((env.sfactory, env.afactory), 0)
+        self.cmodel = fmodels.Tabular((env.sspace, env.aspace), 0)
 
 
 class TabularEligibility(Eligibility):
     def __init__(self, env, gamma, l):
         super().__init__(gamma, l)
-        self.emodel = fmodels.Tabular((env.sfactory, env.afactory), 0.)
+        self.emodel = fmodels.Tabular((env.sspace, env.aspace), 0.)

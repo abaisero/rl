@@ -1,15 +1,17 @@
-import pytk.factory.random as frnd
+import rl.misc.dists as dists
+from pytk.optim import argmax
 
 
-class ActionDistribution(frnd.FactoryDistribution):
+class ActionDistribution(dists.SpaceDistribution):
     def __init__(self, env):
-        super().__init__(env.afactory)
+        super().__init__(env.aspace)
         self.env = env
 
+    # TODO I suppose this could have a bug.... max(pr) might not be the same as max(Q)...
     def amax(self, **kwargs):
-        ddist = dict(self.dist())
+        dist = dict(self.dist())
         return argmax(
-            lambda a:  ddist.get(a, 0.),
+            lambda a:  dist.get(a, 0.),
             self.env.actions,
             **kwargs
         )

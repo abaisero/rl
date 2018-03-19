@@ -12,7 +12,7 @@ from rl.algo.td import SARSA, SARSA_l, Qlearning, Qlearning_l
 import rl.problems.models.mdp as mdp
 
 from pytk.util import true_every
-import pytk.factory as factory
+import indextools
 
 from collections import defaultdict
 
@@ -25,41 +25,39 @@ def roll():
     return rnd.choice(nfaces)+1
 
 
-npips_values = list(range(1, nfaces+1))
-nrolls_values = list(range(max_rolls))
-sfactory = factory.FactoryJoint(
-        npips = factory.FactoryChoice(npips_values),
-        nrolls = factory.FactoryChoice(nrolls_values),
+sspace = indextoold.JointNamedSpace(
+        npips = indextools.RangeSpace(1, nfaces+1),
+        nrolls = indextools.RangeSpace(max_rolls),
 )
 
 avalues = ['hit', 'stand']
-afactory = factory.FactoryChoice(avalues)
+aspace = indextools.DomainSpace(avalues)
 
 def viability(s, a):
     return a.value == 'stand' or s.nrolls.value < max_rolls
 
-env = mdp.Environment(sfactory, afactory, viability)
+env = mdp.Environment(sspace, aspace, viability)
 
 s0model = mdp.State0Model(env)
 @s0model.dist_
 def dist_s0():
     dist = defaultdict(int)
     for npips in range(1, nfaces+1):
-        s0value = dict(npips=npips, nrolls=0)
-        dist[sfactory.item(value=s0value)] = 1 / nfaces
+        s0value = argparse.Namespace(npips=npips, nrolls=0)
+        dist[sspace.elem(value=s0value)] = 1 / nfaces
     return dist
 
 @s0model.sample_
 def sample_s0():
-    s0value = dict(npips=roll(), nrolls=0)
-    return sfactory.item(value=s0value)
+    s0value = argparse.Namespace(npips=roll(), nrolls=0)
+    return sspace.elem(value=s0value)
 
 s1model = mdp.State1Model(env)
 @s1model.sample_
 def sample_s1(s0, a):
     if a.value == 'hit':
         s1value = dict(npips=roll(), nrolls=s0.value.nrolls+1)
-        return sfactory.item(value=s1value), False
+        return sspace.elem(value=s1value), False
     else:
         return s0, True
 

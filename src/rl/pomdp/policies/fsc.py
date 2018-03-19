@@ -4,8 +4,8 @@ import rl.graph as graph
 import argparse
 from rl.misc.argparse import GroupedAction
 
-import pytk.factory as factory
-import pytk.factory.model as fmodel
+import indextools
+import rl.misc.models as models
 
 from collections import namedtuple
 import numpy as np
@@ -16,19 +16,15 @@ IFeedback = namedtuple('IFeedback', 'n1')
 
 
 class FSC(Policy):
-    def __init__(self, env, N, consistent=False):
+    def __init__(self, env, N):
         super().__init__(env)
         self.N = N  # number of nodes
-        self.consistent = consistent
 
-        values = [f'node_{i}' for i in range(N)]
-        self.nfactory = factory.FactoryValues(values)
+        nodes = [f'node_{i}' for i in range(N)]
+        self.nspace = indextools.DomainSpace(nodes)
 
-        self.amodel = fmodel.Softmax(env.afactory, cond=(self.nfactory,))
-        if consistent:
-            self.nmodel = fmodel.Softmax(self.nfactory, cond=(self.nfactory, env.afactory, env.ofactory))
-        else:
-            self.nmodel = fmodel.Softmax(self.nfactory, cond=(self.nfactory, env.ofactory))
+        self.amodel = models.Softmax(env.aspace, cond=(self.nspace,))
+        self.nmodel = models.Softmax(self.nspace, cond=(self.nspace, env.ospace))
 
         # TODO look at pgradient;  this won't work for some reason
         # self.params = np.array([self.amodel.params, self.nmodel.params])
@@ -48,10 +44,7 @@ class FSC(Policy):
     def dlogprobs(self, n, a, o, n1):
         dlogprobs = np.empty(2, dtype=object)
         dlogprobs[0] = self.amodel.dlogprobs(n, a)
-        if self.consistent:
-            dlogprobs[1] = self.nmodel.dlogprobs(n, a, o, n1)
-        else:
-            dlogprobs[1] = self.nmodel.dlogprobs(n, o, n1)
+        dlogprobs[1] = self.nmodel.dlogprobs(n, o, n1)
         return dlogprobs
 
     def reset(self):
@@ -59,15 +52,15 @@ class FSC(Policy):
         self.nmodel.reset()
 
     def restart(self):
-        self.n = self.nfactory.item(0)
+        self.n = self.nspace.elem(0)
 
     @property
     def nodes(self):
-        return self.nfactory.items
+        return self.nspace.elems
 
     @property
     def nnodes(self):
-        return self.nfactory.nitems
+        return self.nspace.nelems
 
     @property
     def context(self):
@@ -77,10 +70,7 @@ class FSC(Policy):
         return self.feedback_o(feedback.o)
 
     def feedback_o(self, o):
-        if self.consistent:
-            self.n = self.nmodel.sample(self.n, self.a, o)
-        else:
-            self.n = self.nmodel.sample(self.n, o)
+        self.n = self.nmodel.sample(self.n, o)
         return IFeedback(n1=self.n)
 
     def dist(self):
@@ -90,8 +80,7 @@ class FSC(Policy):
         return self.amodel.pr(self.n, a)
 
     def sample(self):
-        self.a = self.amodel.sample(self.n)
-        return self.a
+        return self.amodel.sample(self.n)
 
     def plot(self, nepisodes):
         self.neps = nepisodes

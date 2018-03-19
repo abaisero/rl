@@ -2,25 +2,25 @@ from . import Model_
 
 
 class Environment:
-    def __init__(self, sfactory, afactory):
-        self.sfactory = sfactory
-        self.afactory = afactory
+    def __init__(self, sspace, aspace):
+        self.sspace = sspace
+        self.aspace = aspace
 
     @property
     def states(self):
-        return self.sfactory.items
+        return self.sspace.elems
 
     @property
     def nstates(self):
-        return self.sfactory.nitems
+        return self.sspace.nelems
 
     @property
     def actions(self):
-        return self.afactory.items
+        return self.aspace.elems
 
     @property
     def nactions(self):
-        return self.afactory.nitems
+        return self.aspace.nelems
 
 
 class StateModel(Model_):

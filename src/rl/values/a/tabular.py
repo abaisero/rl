@@ -6,7 +6,7 @@ import rl.values as rlvalues
 class Tabular(A, rlvalues.Tabular):
     def __init__(self, env):
         A.__init__(self, env)
-        rlvalues.Tabular.__init__(self, (env.afactory,))
+        rlvalues.Tabular.__init__(self, (env.aspace,))
 
     def value(self, a):
         return rlvalues.Tabular.value(self, (a,))
