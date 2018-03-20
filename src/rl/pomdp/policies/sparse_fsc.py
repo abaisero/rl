@@ -71,11 +71,11 @@ class SparseFSC(Policy):
 
     def nk2n(self, n, k):
         #  I thought it should have been [:, k.i, n.i]...
-        n1i = self.nkn[:, k.i, n.i].nonzero()[0].item()
+        n1i = self.nkn[:, k.idx, n.idx].nonzero()[0].item()
         return self.nspace.elem(n1i)
 
     def nn2k(self, n, n1):
-        k1i = self.nkn[n1.i, :, n.i].nonzero()[0].item()
+        k1i = self.nkn[n1.idx, :, n.idx].nonzero()[0].item()
         return self.kspace.elem(k1i)
 
     def dlogprobs(self, n, a, o, n1):
