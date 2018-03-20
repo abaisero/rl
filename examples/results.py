@@ -15,6 +15,7 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
+
     for name in args.results:
         try:
             results = np.load(name)
@@ -24,9 +25,20 @@ if __name__ == '__main__':
 
         print(f'File {name} loaded.')
 
-        mean = results.mean(axis=0)
-        plt.plot(mean, label=name)
+        plt.subplot(311)
+        res = results.max(axis=0)
+        plt.plot(res, label=name)
+        plt.grid(True)
 
-    plt.grid()
-    plt.legend()
+        plt.subplot(312)
+        res = results.mean(axis=0)
+        plt.plot(res, label=name)
+        plt.grid(True)
+
+        plt.subplot(313)
+        res = results.min(axis=0)
+        plt.plot(res, label=name)
+        plt.grid(True)
+
+    plt.legend(frameon=True)
     plt.show()
