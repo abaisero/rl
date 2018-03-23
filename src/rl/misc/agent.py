@@ -1,7 +1,6 @@
 class Agent:
-    def __init__(self, name, env, policy):
+    def __init__(self, name, policy):
         self.name = name
-        self.env = env
         self.policy = policy
 
     def reset(self):
@@ -13,8 +12,8 @@ class Agent:
     def act(self, context):
         raise NotImplementedError
 
-    def feedback(self, sys, context, a, feedback):
+    def feedback(self, context, a, feedback, context1):
         pass
 
-    def feedback_episode(self, sys, episode):
+    def feedback_episode(self, episode):
         pass

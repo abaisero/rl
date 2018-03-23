@@ -54,25 +54,30 @@ class System:
             episode = []
 
             self.t = 0
+            context1 = self.context
             while not self.done:
-                context = self.context
+                context = context1
+
                 a = agent.act(context)
                 feedback = self.step(a)
 
                 logger.info(f'e={ne} \t; t={self.t} \t; s={self.s} \t; {context} \t; a={a} \t; {feedback}')
 
-                episode.append((context, a, feedback))
+                self.t += 1
+                context1 = self.context
+                episode.append((context, a, feedback, context1))
 
                 self.t += 1
 
-                agent.feedback(self, context, a, feedback)
+                # TODO remove all this crap!
+                agent.feedback(context, a, feedback, context1)
                 for cb in callbacks:
-                    cb.feedback(self, context, a, feedback)
+                    cb.feedback(context, a, feedback, context1)
                 for fb in feedbacks:
-                    fb(self, context, a,feedback)
+                    fb(context, a,feedback, context1)
 
-            agent.feedback_episode(self, episode)
+            agent.feedback_episode(episode)
             for cb in callbacks:
-                cb.feedback_episode(self, episode)
+                cb.feedback_episode(episode)
             for fbe in feedbacks_episode:
-                fbe(self, episode)
+                fbe(episode)

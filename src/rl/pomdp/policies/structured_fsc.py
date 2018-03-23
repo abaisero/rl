@@ -11,6 +11,8 @@ import indextools
 import rl.misc.models as models
 
 from collections import namedtuple
+from types import SimpleNamespace
+
 import numpy as np
 import numpy.linalg as la
 import numpy.random as rnd
@@ -65,6 +67,10 @@ class StructuredFSC(Policy):
         dlogprobs[1] = self.nmodel.dlogprobs(n, o, n1)
         return dlogprobs
 
+    def new_pcontext(self):
+        n = self.n0
+        return SimpleNamespace(n=n)
+
     def reset(self):
         self.amodel.reset()
         self.nmodel.reset()
@@ -72,34 +78,9 @@ class StructuredFSC(Policy):
         nmask = np.stack([self.nmask] * self.env.nobs, axis=1)
         self.nmodel.params[~nmask.T] = -np.inf
 
-        # _p = 10
-        # self.nmodel.params[1, 0, 0] = -_p
-        # self.nmodel.params[1, 1, 0] = _p
-        # self.nmodel.params[1, 0, 2] = _p
-        # self.nmodel.params[1, 1, 2] = -_p
-
-        # self.nmodel.params[2, 0, 1] = -_p
-        # self.nmodel.params[2, 1, 1] = _p
-        # self.nmodel.params[2, 0, 3] = _p
-        # self.nmodel.params[2, 1, 3] = -_p
-
-        # self.nmodel.params[3, 0, 2] = -_p
-        # self.nmodel.params[3, 1, 2] = _p
-        # self.nmodel.params[3, 0, 4] = _p
-        # self.nmodel.params[3, 1, 4] = -_p
-
-        # self.nmodel.params[4, 0, 3] = -_p
-        # self.nmodel.params[4, 1, 3] = _p
-        # self.nmodel.params[4, 0, 5] = _p
-        # self.nmodel.params[4, 1, 5] = -_p
-
-        # self.nmodel.params[5, 0, 4] = -_p
-        # self.nmodel.params[5, 1, 4] = _p
-        # self.nmodel.params[5, 0, 6] = _p
-        # self.nmodel.params[5, 1, 6] = -_p
-
-    def restart(self):
-        self.n = self.n0.copy()
+    # def restart(self):
+    #     pass
+        # self.n = self.n0.copy()
 
     @property
     def nodes(self):
@@ -111,31 +92,38 @@ class StructuredFSC(Policy):
 
     @property
     def context(self):
-        return IContext(self.n)
+        pass
+        # return IContext(self.n)
 
     def feedback(self, feedback):
-        ifeedback = self.feedback_o(feedback.o)
-        self.logger.debug(f'feedback({feedback}) -> {ifeedback}')
-        return ifeedback
+        pass
+        # ifeedback = self.feedback_o(feedback.o)
+        # self.logger.debug(f'feedback({feedback}) -> {ifeedback}')
+        # return ifeedback
 
     def feedback_o(self, o):
-        n1 = self.nmodel.sample(self.n, o)
-        ifeedback = IFeedback(n1=n1)
-        self.logger.debug(f'feedback_o(o) + {self.n} -> {ifeedback}')
+        pass
+        # n1 = self.nmodel.sample(self.n, o)
+        # ifeedback = IFeedback(n1=n1)
+        # self.logger.debug(f'feedback_o(o) + {self.n} -> {ifeedback}')
 
-        self.n = n1
-        return ifeedback
+        # self.n = n1
+        # return ifeedback
 
-    def dist(self):
-        return self.amodel.dist(self.n)
+    def dist(self, pcontext):
+        # return self.amodel.dist(self.n)
+        return self.amodel.dist(pcontext.n)
 
-    def pr(self, a):
-        return self.amodel.pr(self.n, a)
+    def pr(self, pcontext, a):
+        # return self.amodel.pr(self.n, a)
+        return self.amodel.pr(pcontext.n, a)
 
-    def sample(self):
-        self.a = self.amodel.sample(self.n)
-        self.logger.debug(f'sample() + {self.n} -> {self.a}')
-        return self.a
+    def sample(self, pcontext):
+        # return self.amodel.sample(self.n)
+        return self.amodel.sample(pcontext.n)
+
+    def sample_n(self, n, o):
+        return self.nmodel.sample(n, o)
 
     def plot(self, nepisodes):
         self.neps = nepisodes
@@ -159,14 +147,26 @@ class StructuredFSC(Policy):
     def from_dotfss(self):
         pass
 
-    @staticmethod
-    def parser(group=None):
-        def group_fmt(dest):
-            return dest if group is None else f'{group}.{dest}'
+    # @staticmethod
+    # def parser(group=None):
+    #     def group_fmt(dest):
+    #         return dest if group is None else f'{group}.{dest}'
 
-        parser = argparse.ArgumentParser(add_help=False)
-        parser.add_argument(dest=group_fmt('fss'), metavar='fss', action=GroupedAction, default=argparse.SUPPRESS)
-        return parser
+    #     parser = argparse.ArgumentParser(add_help=False)
+    #     parser.add_argument(dest=group_fmt('fss'), metavar='fss',
+    #             action=GroupedAction, default=argparse.SUPPRESS)
+
+    #     parser.add_argument('--belief', action='store_const', const=True,
+    #             default=False)
+
+    #     return parser
+
+    parser = argparse.ArgumentParser(add_help=False)
+    parser.add_argument('fss', type=str)
+
+    parser.add_argument('--belief', action='store_const', const=True,
+            default=False)
+
 
     @staticmethod
     def from_fss(env, fname):

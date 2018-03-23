@@ -13,12 +13,12 @@ class SARSA(PreAgent):
         self.Q = Q
         self.counts = Q.counts()
 
-    def feedback(self, sys, context, a, feedback):
+    def feedback(self, context, a, feedback, context1):
         self.logger.debug(f'feedback() \t; {context} \t; a={a} \t; {feedback}')
 
         s = context.s
         s1, r = feedback.s1, feedback.r
-        a1 = self.act(sys.context, preact=True)
+        a1 = self.act(context1, preact=True)
 
         target = r + self.env.gamma * self.Q[s1, a1]
         delta = target - self.Q[s, a]
@@ -40,12 +40,12 @@ class SARSA_l(PreAgent):
         # super().reset()
         self.elig.restart()
 
-    def feedback(self, sys, context, a, feedback):
+    def feedback(self, context, a, feedback, context1):
         self.logger.debug(f'feedback() \t; {context} \t; a={a} \t; {feedback}')
 
         s = context.s
         s1, r = feedback.s1, feedback.r
-        a1 = self.act(sys.context, preact=True)
+        a1 = self.act(context1, preact=True)
 
         self.elig[:] *= self.elig.gl
         self.elig[s, a] += 1
@@ -66,7 +66,7 @@ class ExpectedSARSA(Agent):
         self.counts = Q.counts()
         self.V = v.QBased(Q, policy)
 
-    def feedback(self, sys, context, a, feedback):
+    def feedback(self, context, a, feedback, context1):
         self.logger.debug(f'feedback() \t; {context} \t; a={a} \t; {feedback}')
 
         s = context.s

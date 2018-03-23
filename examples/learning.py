@@ -6,14 +6,13 @@ from logconfig import LOGGING
 import rl.pomdp as pomdp
 import rl.pomdp.envs as envs
 import rl.pomdp.policies as policies
-import rl.pomdp.psearch as psearch
-import rl.pomdp.agents as agents
+import rl.pomdp.algos as algos
 import rl.optim as optim
 import rl.graph as graph
 import rl.misc as misc
-import rl.core.returns as returns
 import rl.misc.blinker as rl_blinker
 import blinker
+import functools
 
 # from pytk.callbacks import Callback
 
@@ -30,7 +29,11 @@ import argparse
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='blarg')
+    # logging configuration
+    logging.config.dictConfig(LOGGING)
+
+
+    parser = argparse.ArgumentParser(description='Learning')
 
     parser.add_argument('--graph', action='store_const', const=True,
             help='show graphics', default=False)
@@ -50,21 +53,33 @@ if __name__ == '__main__':
             default='longterm_average')
     parser.add_argument('--J', dest='objective',
             action='store_const', const='discounted_sum')
-
     parser.add_argument('pomdp', type=str, help='POMDP name')
-    policies.add_subparsers(parser)
 
-    args = parser.parse_args()
-    print(f'Argument Namespace: {args}')
 
-    # logging configuration
-    logging.config.dictConfig(LOGGING)
+    args_ns, rest = parser.parse_known_args()
+    algo_ns, rest = algos.parser.parse_known_args(rest)
+    policy_ns, rest = policies.parser.parse_known_args(rest)
+    # TODO check that algo-policy combination works
 
-    env = envs.env(args.pomdp)
+    # parser.add_argument('pomdp', type=str, help='POMDP name')
+    # policies.add_subparsers(parser)
+    # # policies.add_subparsers(parser)
+    # # algos.add_subparsers(parser)
 
-    policy_cls = policies.policy_cls(args.policy)
-    policy_ns = getattr(args, args.policy)
-    policy = policy_cls.from_namespace(env, policy_ns)
+    # args = parser.parse_args()
+    print(f'Argument Namespace: {args_ns}')
+    print(f'Algorithm Namespace: {algo_ns}')
+    print(f'Policy Namespace: {policy_ns}')
+    algo_ns.stepsize = optim.StepSize(.1)  # TODO set using argv
+
+    env = envs.env(args_ns.pomdp)
+
+    if algo_ns.beta is None:
+        algo_ns.beta = env.gamma
+
+    policy = policies.factory(env, policy_ns)
+    algo = algos.factory(policy, algo_ns)
+
 
 
 #     N = 10
@@ -122,9 +137,9 @@ if __name__ == '__main__':
     # policy = dotfsc.fsc(fscname, env)
     # policy = policies.parse_dotfss(fss_name, env)
 
-    pg = psearch.IsGPOMDP(policy, beta)
-    name = f'IsGPOMDP ($\\beta$={beta})'
-    agent = agents.PolicyGradient(name, env, policy, pg, step_size=step_size)
+    # pg = psearch.IsGPOMDP(policy, beta)
+    # name = f'IsGPOMDP ($\\beta$={beta})'
+    # agent = agents.PolicyGradient(name, policy, pg, step_size=step_size)
 
     # CONJGPOMDP + Istate-GPOMDP
     # policy = policies.FSC(env, N)
@@ -133,8 +148,25 @@ if __name__ == '__main__':
     # name = f'CONJPOMDP-IsGPOMDP (N={N}, $\\beta$={beta}, $\\epsilon$={eps})'
     # agent = agents.PolicySearch(name, env, policy, ps)
 
+    # policy =
+    # update = Qlearning
+    # agent = Agent('Q-learning', policy, update)
 
-    if args.graph:
+    # TODO adapt all above
+    # pg = psearch.IsGPOMDP(policy, beta)
+    # name = f'IsGPOMDP ($\\beta$={beta})'
+    # algo = algos.PolicyGradient(policy, pg, step_size=step_size)
+
+    # name = f'{algo_ns.algo} - {policy_ns.policy}'
+    # name = f'{algo} - {policy}'
+    # print(name)
+
+    agent = pomdp.Agent(policy, algo)
+    print('Agent:', agent)
+
+
+
+    if args_ns.graph:
         def pdict_item(percentile, **kwargs):
             return percentile, dict(name=f'{percentile/100:.2f}', **kwargs)
 
@@ -146,11 +178,11 @@ if __name__ == '__main__':
             pdict_item( 50),
         ])
 
-        q_returns, _ = graph.pplot((args.runs, args.episodes), pdict,
+        q_returns, _ = graph.pplot((args_ns.runs, args_ns.episodes), pdict,
             window=dict(text='Returns', size='16pt', bold=True),
             labels=dict(left='G_t', bottom='Episode'),
         )
-        q_gnorms, _ = graph.pplot((args.runs, args.episodes), pdict,
+        q_gnorms, _ = graph.pplot((args_ns.runs, args_ns.episodes), pdict,
             window=dict(text='Gradient Norms', size='16pt', bold=True),
             labels=dict(left='|w|', bottom='Episode'),
         )
@@ -160,10 +192,10 @@ if __name__ == '__main__':
         except AttributeError:
             policy_plot = False
         else:
-            pplot(args.episodes)
+            pplot(args_ns.episodes)
             policy_plot = True
 
-    horizon = misc.Horizon(args.horizon)
+    horizon = misc.Horizon(args_ns.horizon)
     sys = pomdp.System(env, env.model, horizon)
 
     v = mp.RawValue('i', 0)
@@ -179,21 +211,21 @@ if __name__ == '__main__':
 
         # ensure different randomization for each run
         seed = seed0 + i
-        print(f'Starting run {i+1} / {args.runs};  Running {args.episodes} episodes... (with seed {seed})')
+        print(f'Starting run {i+1} / {args_ns.runs};  Running {args_ns.episodes} episodes... (with seed {seed})')
         rnd.seed(seed)
 
-        idx_offset = i * args.episodes
+        idx_offset = i * args_ns.episodes
         idx_returns = 0
         idx_gnorms = 0
 
-        returns_run = np.empty(args.episodes)
-        # returns_run = np.zeros(args.episodes)
+        returns_run = np.empty(args_ns.episodes)
+        # returns_run = np.zeros(args_ns.episodes)
 
         # TODO bug with return plot
-        # episode_return = Callback(getattr(returns, args.objective))
+        # episode_return = Callback(getattr(returns, args_ns.objective))
 
         signal_episode_end = blinker.signal('episode-end')
-        objective = getattr(returns, args.objective)
+        objective = getattr(env, args_ns.objective)
         objective = rl_blinker.fire_after(signal_episode_end)(objective)
 
         # TODO replace all these feedback functions with a single event manager!!!
@@ -202,7 +234,7 @@ if __name__ == '__main__':
         # feedbacks_episode = episode_return,
         feedbacks_episode = objective,
 
-        if args.graph:
+        if args_ns.graph:
             if i == 0:
                 if policy_plot is not None:
                     def episode_dplot(sys, episode):
@@ -211,7 +243,7 @@ if __name__ == '__main__':
                     feedbacks_episode += episode_dplot,
 
         # TODO I can still print the different between parameters!!!!
-        if args.graph:
+        if args_ns.graph:
             def episode_gnorm(gradient):
                 nonlocal idx_gnorms
                 if gradient.dtype == object:
@@ -244,7 +276,7 @@ if __name__ == '__main__':
         agent.reset()
         sys.run(
             agent,
-            nepisodes=args.episodes,
+            nepisodes=args_ns.episodes,
             feedbacks=feedbacks,
             feedbacks_episode=feedbacks_episode,
         )
@@ -252,9 +284,9 @@ if __name__ == '__main__':
         return returns_run
 
 
-    run_args = range(args.runs)
-    if args.processes > 1:  # parallel
-        with mp.Pool(processes=args.processes) as pool:
+    run_args = range(args_ns.runs)
+    if args_ns.processes > 1:  # parallel
+        with mp.Pool(processes=args_ns.processes) as pool:
             rets = pool.map(run, run_args)
     else:  # sequential
         rets = [run(a) for a in run_args]
@@ -262,14 +294,14 @@ if __name__ == '__main__':
 
 
     try:
-        out_fname = args.out
+        out_fname = args_ns.out
     except AttributeError:
         pass
     finally:
         np.save(out_fname, rets)
 
 
-    if args.graph:
+    if args_ns.graph:
         q_returns.put(None)
         q_gnorms.put(None)
 

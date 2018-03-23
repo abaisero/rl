@@ -16,7 +16,7 @@ class TD(Agent):
         self.V = V
         self.counts = V.counts()
 
-    def feedback(self, sys, context, a, feedback):
+    def feedback(self, context, a, feedback, context1):
         self.logger.debug(f'feedback() \t; {context} \t; a={a} \t; {feedback}')
 
         s = context.s
@@ -58,7 +58,7 @@ class TD_l(Agent):
     def restart(self):
         self.elig.restart()
 
-    def feedback(self, sys, context, a, feedback):
+    def feedback(self, context, a, feedback, context1):
         self.logger.debug(f'feedback() \t; {context} \t; a={a} \t; {feedback}')
 
         s = context.s

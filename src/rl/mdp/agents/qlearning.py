@@ -14,7 +14,7 @@ class Qlearning(Agent):
         self.Q = Q
         self.counts = Q.counts()
 
-    def feedback(self, sys, context, a, feedback):
+    def feedback(self, context, a, feedback, context1):
         self.logger.debug(f'feedback() \t; {context} \t; a={a} \t; {feedback}')
 
         s = context.s
@@ -39,7 +39,7 @@ class Qlearning_l(Agent):
     def reset(self):
         self.elig.reset()
 
-    def feedback(self,sys, context, a, feedback):
+    def feedback(self, context, a, feedback, context1):
         self.logger.debug(f'feedback() \t; {context} \t; a={a} \t; {feedback}')
 
         s = context.s
@@ -61,7 +61,7 @@ class Qlearning_l(Agent):
 #         self.Q1 = Q1
 #         self.Q2 = Q2
 
-#     def feedback(self, sys, context, a, feedback):
+#     def feedback(self, context, a, feedback, context1):
 #         s = context.s
 #         s1, r = feedback.s1, feedback.r
 

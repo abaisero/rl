@@ -2,11 +2,11 @@ from .model import Model
 
 import numpy as np
 import numpy.random as rnd
-from scipy.misc import logsumexp
+from scipy.special import logsumexp
 
 import pytk.probability as probability
 
-# import string
+import string
 
 
 class Softmax(Model):
@@ -21,9 +21,9 @@ class Softmax(Model):
         self.yaxes = tuple(range(self.xrank, self.rank))
 
         ## subscripts for np.einsum
-        # self.yss = string.ascii_lowercase[:self.yrank]
-        # self.xss = string.ascii_lowercase[self.yrank:self.rank]
-        # self.ss = self.yss + self.xss
+        self.xss = string.ascii_lowercase[:self.xrank]
+        self.yss = string.ascii_lowercase[self.xrank:self.rank]
+        self.ss = self.xss + self.yss
 
         # precomputed features (done once)
         self.__phi = np.eye(self.size).reshape(2 * self.dims)
@@ -44,13 +44,13 @@ class Softmax(Model):
             pass
 
         if elem is None: return slice(None)
-        if elem is Ellipsis: return slice(None)
-        # if isinstance(elem, slice): return elem
+        # if elem is Ellipsis: return slice(None)
+        if isinstance(elem, slice): return elem
 
-        raise Exception('What have you done')
+        assert False, 'Type of `elem` unknown?'
 
     def indices(self, *elems, split=False):
-        elems += (...,) * (self.rank - len(elems))
+        elems += (slice(None),) * (self.rank - len(elems))
         indices = tuple(self.index(elem) for elem in elems)
         if split:
             return indices[:self.xrank], indices[self.xrank:]
@@ -87,28 +87,51 @@ class Softmax(Model):
     def dprefs(self, *elems):
         return self.phi(*elems)
 
+    # def dlogprobs(self, *elems):
+    #     idxs = self.indices(*elems)
+    #     xidxs, yidxs = idxs[:self.xrank], idxs[self.xrank:]
+    #     # xungiven = sum(isinstance(idx, slice) for idx in xidxs)
+
+    #     # xelems = elems[:self.xrank]
+    #     # dprefs = self.dprefs(*xelems)
+    #     # probs = self.probs(*xelems)
+
+    #     # axes = tuple(range(xungiven, xungiven+self.yrank))
+    #     # dlogprobs = dprefs - np.tensordot(probs, dprefs, axes=(axes, axes))
+    #     # TODO
+
+    #     # td[xidx] = np.empty(stuff)
+    #     # for xidx in ...:
+    #     #     td[xidx] = np.tensordot(probs[xidx], dprefs[xidx], axes=self.yrank)
+
+    #     dprefs = self.dprefs()
+    #     probs = self.probs()
+    #     dlogprobs = dprefs[xidxs] - np.einsum(f'{self.ss},{self.ss}...->{self.xss}...', probs, dprefs)[xidxs+(np.newaxis,)*self.yrank]
+    #     return dlogprobs[yidxs]  # TODO something still wrong?
+
     def dlogprobs(self, *elems):
         idxs = self.indices(*elems)
         xidxs, yidxs = idxs[:self.xrank], idxs[self.xrank:]
-        xungiven = sum(isinstance(idx, slice) for idx in xidxs)
+        # xungiven = sum(isinstance(idx, slice) for idx in xidxs)
 
+        # TODO improve performance of this!! there must be a way
         xelems = elems[:self.xrank]
-        dprefs = self.dprefs(*xelems)
-        probs = self.probs(*xelems)
+        dprefs = self.dprefs()
+        probs = self.probs()
 
-        axes = tuple(range(xungiven, xungiven+self.yrank))
-        dlogprobs = dprefs - np.tensordot(probs, dprefs, axes=(axes, axes))
+        dlogprobs = dprefs - np.einsum(f'{self.ss},{self.ss}...->{self.xss}...', probs, dprefs)[(slice(None),)*self.xrank + (None,)*self.yrank + (...,)]
+        return dlogprobs[idxs]
 
-        return dlogprobs[yidxs]
+        # dlogprobs = dprefs[xidxs] - np.einsum(f'{self.ss},{self.ss}...->{self.xss}...', probs, dprefs)[xidxs + (None,)*self.yrank + (...,)]
+        # return dlogprobs[yidxs]
+
+
 
     def dprobs(self, *elems):
-        idxs = self.indices(*elems)
-        unindexed = sum(isinstance(idx, slice) for idx in idxs)
-
         probs = self.probs(*elems)
         dlogprobs = self.dlogprobs(*elems)
-        dprobs = np.tensordot(probs, dlogprobs, axes=unindexed)
-        return dprobs
+        broadcast = (...,) + (np.newaxis,)*self.rank
+        return probs[broadcast] * dlogprobs
 
     #
 

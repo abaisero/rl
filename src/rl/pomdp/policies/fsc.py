@@ -8,14 +8,22 @@ import indextools
 import rl.misc.models as models
 
 from collections import namedtuple
+from types import SimpleNamespace
+
 import numpy as np
 
 
 IContext = namedtuple('IContext', 'n')
 IFeedback = namedtuple('IFeedback', 'n1')
 
+# PContext = SimpleNamespace('PContext', 'amodel, nmodel, n')
 
+
+# @add_subparser('fsc')
 class FSC(Policy):
+    def __repr__(self):
+        return f'FSC(N={self.N})'
+
     def __init__(self, env, N):
         super().__init__(env)
         self.N = N  # number of nodes
@@ -47,12 +55,17 @@ class FSC(Policy):
         dlogprobs[1] = self.nmodel.dlogprobs(n, o, n1)
         return dlogprobs
 
+    def new_pcontext(self):
+        n = self.nspace.elem(0)
+        return SimpleNamespace(n=n)
+
     def reset(self):
         self.amodel.reset()
         self.nmodel.reset()
 
-    def restart(self):
-        self.n = self.nspace.elem(0)
+    # def restart(self):
+    #     pass
+    #     # self.n = self.nspace.elem(0)
 
     @property
     def nodes(self):
@@ -62,25 +75,29 @@ class FSC(Policy):
     def nnodes(self):
         return self.nspace.nelems
 
-    @property
-    def context(self):
-        return IContext(self.n)
+    # def feedback(self, feedback):
+    #     pass
+    #     # return self.feedback_o(feedback.o)
 
-    def feedback(self, feedback):
-        return self.feedback_o(feedback.o)
+    # def feedback_o(self, o):
+    #     pass
+    #     # self.n = self.nmodel.sample(self.n, o)
+    #     # return IFeedback(n1=self.n)
 
-    def feedback_o(self, o):
-        self.n = self.nmodel.sample(self.n, o)
-        return IFeedback(n1=self.n)
+    def dist(self, pcontext):
+        # return self.amodel.dist(self.n)
+        return self.amodel.dist(pcontext.n)
 
-    def dist(self):
-        return self.amodel.dist(self.n)
+    def pr(self, pcontext, a):
+        # return self.amodel.pr(self.n, a)
+        return self.amodel.pr(pcontext.n, a)
 
-    def pr(self, a):
-        return self.amodel.pr(self.n, a)
+    def sample(self, pcontext):
+        # return self.amodel.sample(self.n)
+        return self.amodel.sample(pcontext.n)
 
-    def sample(self):
-        return self.amodel.sample(self.n)
+    def sample_n(self, n, o):
+        return self.nmodel.sample(n, o)
 
     def plot(self, nepisodes):
         self.neps = nepisodes
@@ -101,14 +118,25 @@ class FSC(Policy):
             self.q.put(None)
 
 
-    @staticmethod
-    def parser(group=None):
-        def group_fmt(dest):
-            return dest if group is None else f'{group}.{dest}'
+    # @staticmethod
+    # def parser(group=None):
+    #     def group_fmt(dest):
+    #         return dest if group is None else f'{group}.{dest}'
 
-        parser = argparse.ArgumentParser(add_help=False)
-        parser.add_argument(dest=group_fmt('n'), metavar='n', type=int, action=GroupedAction, default=argparse.SUPPRESS)
-        return parser
+    #     parser = argparse.ArgumentParser(add_help=False)
+    #     parser.add_argument(dest=group_fmt('n'), metavar='n', type=int,
+    #             action=GroupedAction, default=argparse.SUPPRESS)
+
+    #     parser.add_argument('--belief', action='store_const', const=True,
+    #             default=False)
+
+    #     return parser
+
+    parser = argparse.ArgumentParser(add_help=False)
+    parser.add_argument('n', type=int)
+
+    parser.add_argument('--belief', action='store_const', const=True,
+            default=False)
 
     @staticmethod
     def from_namespace(env, namespace):

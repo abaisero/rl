@@ -1,12 +1,12 @@
 import logging
 logger = logging.getLogger(__name__)
 
-from .agent import Agent
+from .algo import Algo
 
 import numpy as np
 
 
-class PolicySearch(Agent):
+class PolicySearch(Algo):
     logger = logging.getLogger(f'{__name__}.PolicySearch')
 
     def __init__(self, name, env, policy, psearch):
@@ -21,7 +21,7 @@ class PolicySearch(Agent):
         self.policy.restart()
         self.psearch.restart()
 
-    def feedback(self, sys, context, a, feedback):
+    def feedback(self, context, a, feedback, context1):
         self.logger.debug(f'feedback() \t; {context} \t; a={a} \t; {feedback}')
 
         try:
@@ -30,13 +30,13 @@ class PolicySearch(Agent):
             except AttributeError:
                 return
 
-            params = psearch_feedback(sys, context, a, feedback)
+            params = psearch_feedback(context, a, feedback, context1)
             if params is not None:
                 self.policy.params = params
         finally:
             self.policy.feedback(feedback)
 
-    def feedback_episode(self, sys, episode):
+    def feedback_episode(self, episode):
         self.logger.debug(f'feedback_episode() \t; len(episode)={len(episode)}')
 
         try:
@@ -44,6 +44,6 @@ class PolicySearch(Agent):
         except AttributeError:
             return
 
-        params = psearch_feedback_episode(sys, episode)
+        params = psearch_feedback_episode(episode)
         if params is not None:
             self.policy.params = params

@@ -1,5 +1,8 @@
 from .model import Model
 
+import numpy as np
+import numpy.random as rnd
+
 import pytk.probability as probability
 
 
@@ -11,17 +14,21 @@ class Tabular(Model):
         self.ysize = np.prod(self.ydims)
         self.size = self.xsize * self.ysize
 
+        self.xaxes = tuple(range(self.xrank))
+        self.yaxes = tuple(range(self.xrank, self.rank))
+
         self.reset()
 
     def reset(self):
-        self[:] = np.ones(self.dims)
+        self.params = np.ones(self.dims)
+        self[:] = 1
 
     def __getitem__(self, elems):
-        idxs = self.indices(*elems)
+        idxs = self.indices(elems)
         return self.params[idxs]
 
     def __setitem__(self, elems, value):
-        idxs = self.indices(*elems)
+        idxs = self.indices(elems)
         self.params[idxs] = value
         params_normal = probability.normal(self.params)
         params_conditional = probability.conditional(params_normal, axis=self.xaxes)
@@ -35,13 +42,18 @@ class Tabular(Model):
             pass
 
         if elem is None: return slice(None)
-        if elem is Ellipsis: return slice(None)
-        # if isinstance(elem, slice): return elem
+        # if elem is Ellipsis: return slice(None)
+        if isinstance(elem, slice): return elem
 
-        raise Exception('What have you done')
+        assert False, 'Type of `elem` unknown?'
 
-    def indices(self, *elems, split=False):
-        elems += (...,) * (self.rank - len(elems))
+    def indices(self, elems, split=False):
+        try:
+            nelems = len(elems)
+        except TypeError:
+            elems = elems,
+            nelems = 1
+        elems += (slice(None),) * (self.rank - nelems)
         indices = tuple(self.index(elem) for elem in elems)
         if split:
             return indices[:self.xrank], indices[self.xrank:]
@@ -51,7 +63,7 @@ class Tabular(Model):
         return np.log(self.probs(*elems))
 
     def probs(self, *elems):
-        idxs = self.indices(*elems)
+        idxs = self.indices(elems)
         return self.params[idxs]
 
     #

@@ -7,7 +7,7 @@ from .agent import Agent
 class REINFORCE(Agent):
     logger = logging.getLogger(f'{__name__}.REINFORCE')
 
-    def feedback(self, sys, context, a, feedback):
+    def feedback(self, context, a, feedback, context1):
         self.logger.debug(f'feedback() \t; {context} \t; a={a} \t; {feedback}')
 
         t, s = context.t, context.s
@@ -16,14 +16,14 @@ class REINFORCE(Agent):
         self.z = self.env.gamma * self.z + self.policy.dlogprobs(s, a)
         self.d += (r * self.z - self.d) / (t+1)
 
-    def feedback_episode(self, sys, episode):
+    def feedback_episode(self, episode):
         self.logger.debug(f'feedback_episode() \t; len(episode)={len(episode)}')
 
         alpha = 1
         self.policy.params += alpha * self.d
 
 
-    # def feedback_episode(self, sys, episode):
+    # def feedback_episode(self, episode):
     #     self.logger.debug(f'feedback_episode() \t; len(episode)={len(episode)}')
 
     #     G = 0.

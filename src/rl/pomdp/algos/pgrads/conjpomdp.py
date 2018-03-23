@@ -24,15 +24,15 @@ class CONJPOMDP(P):
     def restart(self):
         self.grad.restart()
 
-    def feedback(self, sys, context, a, feedback):
+    def feedback(self, context, a, feedback, context1):
         self.logger.debug(f'feedback() \t; {context} \t; a={a} \t; {feedback}')
 
-        return self.grad.feedback(sys, context, a, feedback)
+        return self.grad.feedback(context, a, feedback, context1)
 
-    def feedback_episode(self, sys, episode):
+    def feedback_episode(self, episode):
         self.logger.debug(f'feedback_episode() \t; len(episode)={len(episode)}')
 
-        # dparams = self.grad.feedback_episode(sys, episode)
+        # dparams = self.grad.feedback_episode(episode)
         # try:
         #     pgen_send = self.pgen.send
         # except AttributeError:
@@ -42,7 +42,7 @@ class CONJPOMDP(P):
 
         # return pgen_send(dparams)
 
-        dparams = self.grad.feedback_episode(sys, episode)
+        dparams = self.grad.feedback_episode(episode)
         if self.pgen is None:
             params = self.policy.params
             self.pgen = self.conjpomdp(params, dparams)

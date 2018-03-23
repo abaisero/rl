@@ -8,8 +8,8 @@ class P:
     def restart(self):
         pass
 
-    def feedback(self, sys, context, a, feedback):
+    def feedback(self, context, a, feedback, context1):
         pass
 
-    def feedback_episode(self, sys, episode):
+    def feedback_episode(self, episode, context1):
         pass

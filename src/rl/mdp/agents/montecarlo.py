@@ -23,7 +23,7 @@ class MonteCarloES(Agent):
             return rnd.choice(list(self.env.actions))
         return super().act(context)
 
-    def feedback_episode(self, sys, episode):
+    def feedback_episode(self, episode):
         self.logger.debug(f'feedback_episode() \t; len(episode)={len(episode)}')
 
         G, Gs = 0., dict()
@@ -48,7 +48,7 @@ class MonteCarloControl(Agent):
         self.Q = Q
         self.Glists = dict()
 
-    def feedback_episode(self, sys, episode):
+    def feedback_episode(self, episode):
         self.logger.debug(f'feedback_episode() \t; len(episode)={len(episode)}')
 
         G, Gs = 0., dict()

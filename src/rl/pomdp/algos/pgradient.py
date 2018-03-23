@@ -1,19 +1,24 @@
 import logging
 logger = logging.getLogger(__name__)
 
-from .agent import Agent
+from .algo import Algo
 
 import numpy as np
 
 
-class PolicyGradient(Agent):
+class PolicyGradient(Algo):
     logger = logging.getLogger(f'{__name__}.PolicyGradient')
 
-    def __init__(self, name, env, policy, pgrad, step_size=None):
+    def __repr__(self):
+        return repr(self.pgrad)
+
+    def __init__(self, policy, pgrad, step_size=None):
+    # def __init__(self, name, policy, pgrad, step_size=None):
         if step_size is None:
             step_size = optim.StepSize(1)
 
-        super().__init__(name, env, policy)
+        # super().__init__(name, policy)
+        self.policy = policy
         self.pgrad = pgrad
         self.step_size = step_size
 
@@ -24,11 +29,9 @@ class PolicyGradient(Agent):
         self.step_size.reset()
 
     def restart(self):
-        self.logger.debug('restart()')
-        self.policy.restart()
         self.pgrad.restart()
 
-    def feedback(self, sys, context, a, feedback):
+    def feedback(self, pcontext, context, a, feedback, context1):
         self.logger.info(f'feedback() \t; {context} \t; a={a} \t; {feedback}')
 
         try:
@@ -37,7 +40,7 @@ class PolicyGradient(Agent):
             self.policy.feedback(feedback)
             return
 
-        dparams = pgrad_feedback(sys, context, a, feedback)
+        dparams = pgrad_feedback(pcontext, context, a, feedback, context1)
         try:
             dparams *= self.step_size()
         except TypeError:
@@ -47,7 +50,7 @@ class PolicyGradient(Agent):
 
         self.policy.params += dparams
 
-    def feedback_episode(self, sys, episode):
+    def feedback_episode(self, pcontext, episode):
         self.logger.info(f'feedback_episode() \t; len(episode)={len(episode)}')
 
         try:
@@ -55,7 +58,7 @@ class PolicyGradient(Agent):
         except AttributeError:
             return
 
-        dparams = pgrad_feedback_episode(sys, episode)
+        dparams = pgrad_feedback_episode(pcontext, episode)
 
         try:
             dparams *= self.step_size()

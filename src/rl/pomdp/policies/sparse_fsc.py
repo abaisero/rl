@@ -9,6 +9,8 @@ import rl.misc.models as models
 
 
 from collections import namedtuple
+from types import SimpleNamespace
+
 import numpy as np
 import numpy.linalg as la
 import numpy.random as rnd
@@ -70,13 +72,12 @@ class SparseFSC(Policy):
         self.kmodel.params = oparams
 
     def nk2n(self, n, k):
-        #  I thought it should have been [:, k.i, n.i]...
-        n1i = self.nkn[:, k.idx, n.idx].nonzero()[0].item()
-        return self.nspace.elem(n1i)
+        n1idx = self.nkn[:, k.idx, n.idx].nonzero()[0].item()
+        return self.nspace.elem(n1idx)
 
     def nn2k(self, n, n1):
-        k1i = self.nkn[n1.idx, :, n.idx].nonzero()[0].item()
-        return self.kspace.elem(k1i)
+        k1idx = self.nkn[n1.idx, :, n.idx].nonzero()[0].item()
+        return self.kspace.elem(k1idx)
 
     def dlogprobs(self, n, a, o, n1):
         dlogprobs = np.empty(2, dtype=object)
@@ -85,12 +86,17 @@ class SparseFSC(Policy):
         dlogprobs[1] = self.kmodel.dlogprobs(n, o, k1)
         return dlogprobs
 
+    def new_pcontext(self):
+        n = self.nspace.elem(0)
+        return SimpleNamespace(n=n)
+
     def reset(self):
         self.amodel.reset()
         self.kmodel.reset()
 
-    def restart(self):
-        self.n = self.nspace.elem(0)
+    # def restart(self):
+    #     pass
+    #     # self.n = self.nspace.elem(0)
 
     @property
     def nodes(self):
@@ -100,27 +106,36 @@ class SparseFSC(Policy):
     def nnodes(self):
         return self.nspace.nelems
 
-    @property
-    def context(self):
-        return IContext(self.n)
+    # @property
+    # def context(self):
+    #     pass
+    #     # return IContext(self.n)
 
-    def feedback(self, feedback):
-        return self.feedback_o(feedback.o)
+    # def feedback(self, feedback):
+    #     pass
+    #     # return self.feedback_o(feedback.o)
 
-    def feedback_o(self, o):
-        k = self.kmodel.sample(self.n, o)
-        self.n = self.nk2n(self.n, k)
-        return IFeedback(n1=self.n)
+    # def feedback_o(self, o):
+    #     pass
+    #     # k = self.kmodel.sample(self.n, o)
+    #     # self.n = self.nk2n(self.n, k)
+    #     # return IFeedback(n1=self.n)
 
-    def dist(self):
-        return self.amodel.dist(self.n)
+    def dist(self, pcontext):
+        # return self.amodel.dist(self.n)
+        return self.amodel.dist(pcontext.n)
 
-    def pr(self, a):
-        return self.amodel.pr(self.n, a)
+    def pr(self, pcontext, a):
+        # return self.amodel.pr(self.n, a)
+        return self.amodel.pr(pcontext.n, a)
 
-    def sample(self):
-        self.a = self.amodel.sample(self.n)
-        return self.a
+    def sample(self, pcontext):
+        # return self.amodel.sample(self.n)
+        return self.amodel.sample(pcontext.n)
+
+    def sample_n(self, n, o):
+        k = self.kmodel.sample(n, o)
+        return self.nk2n(n, k)
 
     def plot(self, nepisodes):
         self.neps = nepisodes
@@ -143,15 +158,28 @@ class SparseFSC(Policy):
         if self.idx == self.neps:
             self.q.put(None)
 
-    @staticmethod
-    def parser(group=None):
-        def group_fmt(dest):
-            return dest if group is None else f'{group}.{dest}'
+    # @staticmethod
+    # def parser(group=None):
+    #     def group_fmt(dest):
+    #         return dest if group is None else f'{group}.{dest}'
 
-        parser = argparse.ArgumentParser(add_help=False)
-        parser.add_argument(dest=group_fmt('n'), metavar='n', type=int, action=GroupedAction, default=argparse.SUPPRESS)
-        parser.add_argument(dest=group_fmt('k'), metavar='k', type=int, action=GroupedAction, default=argparse.SUPPRESS)
-        return parser
+    #     parser = argparse.ArgumentParser(add_help=False)
+    #     parser.add_argument(dest=group_fmt('n'), metavar='n', type=int,
+    #             action=GroupedAction, default=argparse.SUPPRESS)
+    #     parser.add_argument(dest=group_fmt('k'), metavar='k', type=int,
+    #             action=GroupedAction, default=argparse.SUPPRESS)
+
+    #     parser.add_argument('--belief', action='store_const', const=True,
+    #             default=False)
+
+    #     return parser
+
+    parser = argparse.ArgumentParser(add_help=False)
+    parser.add_argument('n', type=int)
+    parser.add_argument('k', type=int)
+
+    parser.add_argument('--belief', action='store_const', const=True,
+            default=False)
 
     @staticmethod
     def from_namespace(env, namespace):
