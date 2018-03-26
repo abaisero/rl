@@ -10,9 +10,9 @@ pomdp=loadunload
 ./learning.py $opts --out ${pomdp}_isgpomdp_fsc_6.npy $pomdp.pomdp isgpomdp fsc 6
 ./learning.py $opts --out ${pomdp}_isgpomdp_fsc_7.npy $pomdp.pomdp isgpomdp fsc 7
 
-./learning.py $opts --out ${pomdp}_isgpomdp_fsc_3_3.npy $pomdp.pomdp isgpomdp fsc_sparse 5 3
-./learning.py $opts --out ${pomdp}_isgpomdp_fsc_3_3.npy $pomdp.pomdp isgpomdp fsc_sparse 6 3
-./learning.py $opts --out ${pomdp}_isgpomdp_fsc_3_4.npy $pomdp.pomdp isgpomdp fsc_sparse 6 4
+./learning.py $opts --out ${pomdp}_isgpomdp_fsc_5_3.npy $pomdp.pomdp isgpomdp fsc_sparse 5 3
+./learning.py $opts --out ${pomdp}_isgpomdp_fsc_6_3.npy $pomdp.pomdp isgpomdp fsc_sparse 6 3
+./learning.py $opts --out ${pomdp}_isgpomdp_fsc_6_4.npy $pomdp.pomdp isgpomdp fsc_sparse 6 4
 ./learning.py $opts --out ${pomdp}_isgpomdp_fsc_7_3.npy $pomdp.pomdp isgpomdp fsc_sparse 7 3
 ./learning.py $opts --out ${pomdp}_isgpomdp_fsc_7_4.npy $pomdp.pomdp isgpomdp fsc_sparse 7 4
 ./learning.py $opts --out ${pomdp}_isgpomdp_fsc_7_5.npy $pomdp.pomdp isgpomdp fsc_sparse 7 5
@@ -24,9 +24,9 @@ pomdp=loadunload
 ./learning.py $opts --out ${pomdp}_expgpomdp_fsc_7.npy $pomdp.pomdp expgpomdp fsc --belief 7
 
 # TODO belief-sparse-FSC model does not have nmodel
-# ./learning.py $opts --out ${pomdp}_expgpomdp_fsc_3_3.npy $pomdp.pomdp expgpomdp fsc_sparse --belief 5 3
-# ./learning.py $opts --out ${pomdp}_expgpomdp_fsc_3_3.npy $pomdp.pomdp expgpomdp fsc_sparse --belief 6 3
-# ./learning.py $opts --out ${pomdp}_expgpomdp_fsc_3_4.npy $pomdp.pomdp expgpomdp fsc_sparse --belief 6 4
+# ./learning.py $opts --out ${pomdp}_expgpomdp_fsc_5_3.npy $pomdp.pomdp expgpomdp fsc_sparse --belief 5 3
+# ./learning.py $opts --out ${pomdp}_expgpomdp_fsc_6_3.npy $pomdp.pomdp expgpomdp fsc_sparse --belief 6 3
+# ./learning.py $opts --out ${pomdp}_expgpomdp_fsc_6_4.npy $pomdp.pomdp expgpomdp fsc_sparse --belief 6 4
 # ./learning.py $opts --out ${pomdp}_expgpomdp_fsc_7_3.npy $pomdp.pomdp expgpomdp fsc_sparse --belief 7 3
 # ./learning.py $opts --out ${pomdp}_expgpomdp_fsc_7_4.npy $pomdp.pomdp expgpomdp fsc_sparse --belief 7 4
 # ./learning.py $opts --out ${pomdp}_expgpomdp_fsc_7_5.npy $pomdp.pomdp expgpomdp fsc_sparse --belief 7 5
