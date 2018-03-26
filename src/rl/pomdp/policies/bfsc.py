@@ -80,6 +80,8 @@ class BeliefFSC(Policy):
 
     @property
     def nmodel(self):
+        # TODO not all fsc have an nmodel...
+        # TODO need nmodel for sparse stuff
         return self.fsc.nmodel
 
     def dist(self, pcontext):

@@ -21,6 +21,8 @@ IFeedback = namedtuple('IFeedback', 'n1')
 
 
 class SparseFSC(Policy):
+    # TODO implement this same way as StructuredFSC
+
     def __init__(self, env, N, K):
         super().__init__(env)
         self.N = N  # number of nodes

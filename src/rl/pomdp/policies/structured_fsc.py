@@ -77,6 +77,8 @@ class StructuredFSC(Policy):
         self.amodel.params[~self.amask.T] = -np.inf
         nmask = np.stack([self.nmask] * self.env.nobs, axis=1)
         self.nmodel.params[~nmask.T] = -np.inf
+        # TODO this is a hack;  specific to softmax!!!
+        # need better way
 
     # def restart(self):
     #     pass

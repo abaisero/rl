@@ -3,19 +3,20 @@
 # opts=(--runs 10 --episodes 10 --horizon 10)
 opts=(--runs 4)
 pomdp=(tiger.pomdp)
+algo=(expgpomdp)
 
-# ./learning.py $opts --out fsc_3.npy $pomdp isgpomdp fsc 3
-# ./learning.py $opts --out fsc_4.npy $pomdp isgpomdp fsc 4
-./learning.py $opts --out fsc_5.npy $pomdp isgpomdp fsc 5
-# ./learning.py $opts --out fsc_6.npy $pomdp isgpomdp fsc 6
-# ./learning.py $opts --out fsc_7.npy $pomdp isgpomdp fsc 7
+# ./learning.py $opts --out fsc_3.npy $pomdp $algo fsc 3
+# ./learning.py $opts --out fsc_4.npy $pomdp $algo fsc 4
+./learning.py $opts --out fsc_5.npy $pomdp $algo fsc --belief 5
+# ./learning.py $opts --out fsc_6.npy $pomdp $algo fsc 6
+# ./learning.py $opts --out fsc_7.npy $pomdp $algo fsc 7
 
-# ./learning.py $opts --out fsc_sparse_5_2.npy $pomdp isgpomdp fsc_sparse 5 2
-./learning.py $opts --out fsc_sparse_5_3.npy $pomdp isgpomdp fsc_sparse 5 3
-# ./learning.py $opts --out fsc_sparse_5_4.npy $pomdp isgpomdp fsc_sparse 5 4
+# ./learning.py $opts --out fsc_sparse_5_2.npy $pomdp $algo fsc_sparse 5 2
+./learning.py $opts --out fsc_sparse_5_3.npy $pomdp $algo fsc_sparse --belief 5 3
+# ./learning.py $opts --out fsc_sparse_5_4.npy $pomdp $algo fsc_sparse 5 4
 
-./learning.py $opts --out fsc_structured_1.npy $pomdp isgpomdp fsc_structured tiger.lin.1.fss
-# ./learning.py $opts --out fsc_structured_2.npy $pomdp isgpomdp fsc_structured tiger.lin.2.fss
-# ./learning.py $opts --out fsc_structured_3.npy $pomdp isgpomdp fsc_structured tiger.lin.3.fss
+./learning.py $opts --out fsc_structured_1.npy $pomdp $algo fsc_structured --belief tiger.lin.1.fss
+# ./learning.py $opts --out fsc_structured_2.npy $pomdp $algo fsc_structured tiger.lin.2.fss
+# ./learning.py $opts --out fsc_structured_3.npy $pomdp $algo fsc_structured tiger.lin.3.fss
 
 exit 0
