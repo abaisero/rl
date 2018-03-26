@@ -1,41 +1,34 @@
 #!/usr/bin/zsh
 
-opts=(--runs 2 --episodes 2 --steps 2)
-# opts=(--runs 10 --episodes 10 --steps 10)
-opts=(--runs 100 --episodes 20000 --steps 100)
+opts=(--runs 10 --episodes 10 --steps 10)
+# opts=(--runs 100 --episodes 20000 --steps 100)
 pomdp=tiger
 
-# ./learning.py $opts --out ${pomdp}_isgpomdp_fsc_3.npy $pomdp.pomdp isgpomdp fsc 3
-# ./learning.py $opts --out ${pomdp}_isgpomdp_fsc_4.npy $pomdp.pomdp isgpomdp fsc 4
-# ./learning.py $opts --out ${pomdp}_isgpomdp_fsc_5.npy $pomdp.pomdp isgpomdp fsc 5
-# ./learning.py $opts --out ${pomdp}_isgpomdp_fsc_6.npy $pomdp.pomdp isgpomdp fsc 6
-# ./learning.py $opts --out ${pomdp}_isgpomdp_fsc_7.npy $pomdp.pomdp isgpomdp fsc 7
+for N in `seq 3 7`; do
+  ./learning.py $opts --out ${pomdp}_isgpomdp_fsc_$N.npy $pomdp.pomdp isgpomdp fsc $N
+done
 
-./learning.py $opts --out ${pomdp}_isgpomdp_fsc_5_3.npy $pomdp.pomdp isgpomdp fsc_sparse 5 3
-./learning.py $opts --out ${pomdp}_isgpomdp_fsc_6_3.npy $pomdp.pomdp isgpomdp fsc_sparse 6 3
-./learning.py $opts --out ${pomdp}_isgpomdp_fsc_6_4.npy $pomdp.pomdp isgpomdp fsc_sparse 6 4
-./learning.py $opts --out ${pomdp}_isgpomdp_fsc_7_3.npy $pomdp.pomdp isgpomdp fsc_sparse 7 3
-./learning.py $opts --out ${pomdp}_isgpomdp_fsc_7_4.npy $pomdp.pomdp isgpomdp fsc_sparse 7 4
-./learning.py $opts --out ${pomdp}_isgpomdp_fsc_7_5.npy $pomdp.pomdp isgpomdp fsc_sparse 7 5
+for N in `seq 5 7`; do
+for K in `seq 3 $((N-2))`; do
+  ./learning.py $opts --out ${pomdp}_isgpomdp_fsc_${N}_${K}.npy $pomdp.pomdp isgpomdp fsc_sparse $N $K
+done
+done
 
-./learning.py $opts --out ${pomdp}_isgpomdp_fsc_structured_1.npy $pomdp.pomdp isgpomdp fsc_structured tiger.lin.1.fss
-./learning.py $opts --out ${pomdp}_isgpomdp_fsc_structured_2.npy $pomdp.pomdp isgpomdp fsc_structured tiger.lin.2.fss
-./learning.py $opts --out ${pomdp}_isgpomdp_fsc_structured_3.npy $pomdp.pomdp isgpomdp fsc_structured tiger.lin.3.fss
+for S in `seq 3`; do
+  ./learning.py $opts --out ${pomdp}_isgpomdp_fsc_structured_$S.npy $pomdp.pomdp isgpomdp fsc_structured tiger.lin.$S.fss
+done
 
-./learning.py $opts --out ${pomdp}_expgpomdp_fsc_3.npy $pomdp.pomdp expgpomdp fsc --belief 3
-./learning.py $opts --out ${pomdp}_expgpomdp_fsc_4.npy $pomdp.pomdp expgpomdp fsc --belief 4
-./learning.py $opts --out ${pomdp}_expgpomdp_fsc_5.npy $pomdp.pomdp expgpomdp fsc --belief 5
-./learning.py $opts --out ${pomdp}_expgpomdp_fsc_6.npy $pomdp.pomdp expgpomdp fsc --belief 6
-./learning.py $opts --out ${pomdp}_expgpomdp_fsc_7.npy $pomdp.pomdp expgpomdp fsc --belief 7
+for N in `seq 3 7`; do
+  ./learning.py $opts --out ${pomdp}_expgpomdp_fsc_$N.npy $pomdp.pomdp expgpomdp fsc --belief $N
+done
 
 # TODO belief-sparse-FSC model does not have nmodel
-# ./learning.py $opts --out ${pomdp}_expgpomdp_fsc_5_3.npy $pomdp.pomdp expgpomdp fsc_sparse --belief 5 3
-# ./learning.py $opts --out ${pomdp}_expgpomdp_fsc_6_3.npy $pomdp.pomdp expgpomdp fsc_sparse --belief 6 3
-# ./learning.py $opts --out ${pomdp}_expgpomdp_fsc_6_4.npy $pomdp.pomdp expgpomdp fsc_sparse --belief 6 4
-# ./learning.py $opts --out ${pomdp}_expgpomdp_fsc_7_3.npy $pomdp.pomdp expgpomdp fsc_sparse --belief 7 3
-# ./learning.py $opts --out ${pomdp}_expgpomdp_fsc_7_4.npy $pomdp.pomdp expgpomdp fsc_sparse --belief 7 4
-# ./learning.py $opts --out ${pomdp}_expgpomdp_fsc_7_5.npy $pomdp.pomdp expgpomdp fsc_sparse --belief 7 5
+# for N in `seq 5 7`; do
+# for K in `seq 3 $((N-2))`; do
+#   ./learning.py $opts --out ${pomdp}_expgpomdp_fsc_${N}_${K}.npy $pomdp.pomdp expgpomdp fsc_sparse --belief $N $K
+# done
+# done
 
-./learning.py $opts --out ${pomdp}_expgpomdp_fsc_structured_1.npy $pomdp.pomdp expgpomdp fsc_structured --belief tiger.lin.1.fss
-./learning.py $opts --out ${pomdp}_expgpomdp_fsc_structured_2.npy $pomdp.pomdp expgpomdp fsc_structured --belief tiger.lin.2.fss
-./learning.py $opts --out ${pomdp}_expgpomdp_fsc_structured_3.npy $pomdp.pomdp expgpomdp fsc_structured --belief tiger.lin.3.fss
+for S in `seq 3`; do
+  ./learning.py $opts --out ${pomdp}_expgpomdp_fsc_structured_$S.npy $pomdp.pomdp expgpomdp fsc_structured --belief tiger.lin.$S.fss
+done
