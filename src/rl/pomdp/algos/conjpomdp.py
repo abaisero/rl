@@ -1,12 +1,10 @@
 import logging
 logger = logging.getLogger(__name__)
 
-from .p import P
-
-import numpy as np
+from .algo import Algo
 
 
-class CONJPOMDP(P):
+class CONJPOMDP(Algo):
     """ "Experiments with Infinite-Horizon, Policy-Gradient Estimation" - J. Baxter, P. Bartless, L. Weaver """
 
     logger = logging.getLogger(f'{__name__}.CONJPOMDP')
@@ -16,6 +14,9 @@ class CONJPOMDP(P):
         self.grad = grad
         self.step_size = step_size
         self.eps = eps
+
+    def __init__(self, *args, **kwargs):
+        raise NotImplementedError
 
     def reset(self):
         self.grad.reset()

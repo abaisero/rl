@@ -1,8 +1,6 @@
 import rl.pomdp as pomdp
 import indextools
 
-import numpy.random as rnd
-
 
 class Tiger_S0Model(pomdp.State0Distribution):
     def __init__(self, env):

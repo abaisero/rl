@@ -1,27 +1,17 @@
-import rl.mdp as mdp
+class Environment:
+    def __init__(self, pomdp, objective):
+        self.pomdp = pomdp
+        self.objective = objective
 
+    def reset(self):
+        self.s = self.pomdp.model.reset()
+        self.g = 0
+        self.t = 0
+        self.obj = self.objective()
+        self.obj.send(None)
 
-class Environment(mdp.Environment):
-    def __init__(self, sspace, aspace, ospace):
-        super().__init__(sspace, aspace)
-        self.ospace = ospace
-
-    @property
-    def obs(self):
-        return self.ospace.elems
-
-    @property
-    def nobs(self):
-        return self.ospace.nelems
-
-    def discounted_sum(self, episode):
-        """J \eqdot \sum_{t=1}^T r_t \lambda^t"""
-        G = 0.
-        for _, _, feedback, _ in episode:
-            G = self.gamma * G + feedback.r
-        return G
-
-    @staticmethod
-    def longterm_average(episode):
-        r"""\nu \eqdot \frac{1}{T} \sum_{t=1}^T r_t"""
-        return sum(feedback.r for _, _, feedback, _ in episode) / len(episode)
+    def step(self, a):
+        self.s, r, o = self.pomdp.model.step(self.s, a)
+        self.g = self.obj.send(r)
+        self.t += 1
+        return r, o

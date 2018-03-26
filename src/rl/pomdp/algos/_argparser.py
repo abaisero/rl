@@ -1,4 +1,6 @@
-from .pgrads import GPOMDP, IsGPOMDP, ExpGPOMDP
+from .gpomdp import GPOMDP
+from .isgpomdp import IsGPOMDP
+from .expgpomdp import ExpGPOMDP
 import argparse
 
 

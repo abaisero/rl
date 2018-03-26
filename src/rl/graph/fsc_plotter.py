@@ -70,10 +70,10 @@ def process_target(q, nepisodes, alabels, nlabels, olabels):
     sys.exit(app.exec_())
 
 
-def fscplot(fsc, nepisodes):
-    alabels = tuple(fsc.env.aspace.values)
+def fscplot(fsc, pomdp, nepisodes):
+    alabels = tuple(pomdp.aspace.values)
     nlabels = tuple(fsc.nspace.values)
-    olabels = tuple(fsc.env.ospace.values)
+    olabels = tuple(pomdp.ospace.values)
 
     q = mp.Queue()
     p = mp.Process(target=process_target, args=(q, nepisodes, alabels, nlabels, olabels))

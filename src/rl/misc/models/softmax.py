@@ -20,7 +20,7 @@ class Softmax(Model):
         self.xaxes = tuple(range(self.xrank))
         self.yaxes = tuple(range(self.xrank, self.rank))
 
-        ## subscripts for np.einsum
+        # subscripts for np.einsum
         self.xss = string.ascii_lowercase[:self.xrank]
         self.yss = string.ascii_lowercase[self.xrank:self.rank]
         self.ss = self.xss + self.yss
@@ -36,96 +36,40 @@ class Softmax(Model):
         # self.params = 2 * rnd.normal(size=self.dims)
         # self.params = 3 * (.5 - rnd.random_sample(self.dims))
 
-    @staticmethod
-    def index(elem):
-        try:
-            return elem.idx
-        except AttributeError:
-            pass
-
-        if elem is None: return slice(None)
-        # if elem is Ellipsis: return slice(None)
-        if isinstance(elem, slice): return elem
-
-        assert False, 'Type of `elem` unknown?'
-
-    def indices(self, *elems, split=False):
-        elems += (slice(None),) * (self.rank - len(elems))
-        indices = tuple(self.index(elem) for elem in elems)
-        if split:
-            return indices[:self.xrank], indices[self.xrank:]
-        return indices
-
     def phi(self, *elems):
-        idxs = self.indices(*elems)
-        return self.__phi[idxs]
+        return self.__phi[elems]
 
     def prefs(self, *elems):
-        idxs = self.indices(*elems)
-        return self.params[idxs]
+        return self.params[elems]
 
     def logprobs(self, *elems, normalized=True):
-        idxs = self.indices(*elems)
-
-        prefs = self.params
-        logprobs = prefs
+        logprobs = prefs = self.params
         if normalized:
             logprobs -= logsumexp(prefs, axis=self.yaxes, keepdims=True)
 
-        return logprobs[idxs]
+        return logprobs[elems]
 
     def probs(self, *elems, normalized=True):
-        idxs = self.indices(*elems)
-
         logprobs = self.logprobs(normalized=False)
         probs = np.exp(logprobs - logprobs.max())
         if normalized:
             probs /= probs.sum(axis=self.yaxes, keepdims=True)
 
-        return probs[idxs]
+        return probs[elems]
 
     def dprefs(self, *elems):
         return self.phi(*elems)
 
-    # def dlogprobs(self, *elems):
-    #     idxs = self.indices(*elems)
-    #     xidxs, yidxs = idxs[:self.xrank], idxs[self.xrank:]
-    #     # xungiven = sum(isinstance(idx, slice) for idx in xidxs)
-
-    #     # xelems = elems[:self.xrank]
-    #     # dprefs = self.dprefs(*xelems)
-    #     # probs = self.probs(*xelems)
-
-    #     # axes = tuple(range(xungiven, xungiven+self.yrank))
-    #     # dlogprobs = dprefs - np.tensordot(probs, dprefs, axes=(axes, axes))
-    #     # TODO
-
-    #     # td[xidx] = np.empty(stuff)
-    #     # for xidx in ...:
-    #     #     td[xidx] = np.tensordot(probs[xidx], dprefs[xidx], axes=self.yrank)
-
-    #     dprefs = self.dprefs()
-    #     probs = self.probs()
-    #     dlogprobs = dprefs[xidxs] - np.einsum(f'{self.ss},{self.ss}...->{self.xss}...', probs, dprefs)[xidxs+(np.newaxis,)*self.yrank]
-    #     return dlogprobs[yidxs]  # TODO something still wrong?
-
     def dlogprobs(self, *elems):
-        idxs = self.indices(*elems)
-        xidxs, yidxs = idxs[:self.xrank], idxs[self.xrank:]
-        # xungiven = sum(isinstance(idx, slice) for idx in xidxs)
-
-        # TODO improve performance of this!! there must be a way
+        # TODO improve performance
         xelems = elems[:self.xrank]
         dprefs = self.dprefs()
         probs = self.probs()
 
-        dlogprobs = dprefs - np.einsum(f'{self.ss},{self.ss}...->{self.xss}...', probs, dprefs)[(slice(None),)*self.xrank + (None,)*self.yrank + (...,)]
-        return dlogprobs[idxs]
-
-        # dlogprobs = dprefs[xidxs] - np.einsum(f'{self.ss},{self.ss}...->{self.xss}...', probs, dprefs)[xidxs + (None,)*self.yrank + (...,)]
-        # return dlogprobs[yidxs]
-
-
+        reshapekey = (slice(None),) * self.xrank + (np.newaxis,) * self.yrank + (...,)
+        ss = f'{self.ss},{self.ss}...->{self.xss}...'
+        dlogprobs = dprefs - np.einsum(ss, probs, dprefs)[reshapekey]
+        return dlogprobs[elems]
 
     def dprobs(self, *elems):
         probs = self.probs(*elems)

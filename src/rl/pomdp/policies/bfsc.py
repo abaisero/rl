@@ -24,6 +24,9 @@ class BeliefFSC(Policy):
         super().__init__(env)
         self.fsc = fsc
 
+    def __repr__(self):
+        return f'Belief-{self.fsc}'
+
     @property
     def params(self):
         return self.fsc.params
@@ -100,16 +103,16 @@ class BeliefFSC(Policy):
     #     return self.nmodel.sample(n, o)
 
 
-    def plot(self, nepisodes):
-        # self.fsc.plot(nepisodes)
-        raise NotImplementedError
+    def plot(self, pomdp, nepisodes):
+        self.fsc.plot(pomdp, nepisodes)
+        # raise NotImplementedError
         # self.neps = nepisodes
         # self.q, self.p = graph.fscplot(self, nepisodes)
         # self.idx = 0
 
     def plot_update(self):
-        # self.fsc.plot_update()
-        raise NotImplementedError
+        self.fsc.plot_update()
+        # raise NotImplementedError
         # adist = self.amodel.probs()
         # adist /= adist.sum(axis=-1, keepdims=True)
 

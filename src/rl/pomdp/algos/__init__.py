@@ -1,7 +1,10 @@
 from .pgradient import PolicyGradient
 from .psearch import PolicySearch
 
-from .pgrads import GPOMDP, IsGPOMDP, ExpGPOMDP
+from .gpomdp import GPOMDP
+from .isgpomdp import IsGPOMDP
+from .expgpomdp import ExpGPOMDP
+from .conjpomdp import CONJPOMDP
 
 from ._argparser import parser
 
@@ -27,15 +30,15 @@ from ._argparser import parser
 #     subparsers.add_parser('expgpomdp', parents=[_parser], help='ExpGPOMDP')
 
 
-def factory(policy, ns):
+def factory(ns):
     if ns.algo == 'gpomdp':
-        pgrad = GPOMDP.from_namespace(policy, ns)
-        return PolicyGradient(policy, pgrad, ns.stepsize)
+        pg = GPOMDP.from_namespace(ns)
+        return PolicyGradient(pg, ns.stepsize)
     elif ns.algo == 'isgpomdp':
-        pgrad = IsGPOMDP.from_namespace(policy, ns)
-        return PolicyGradient(policy, pgrad, ns.stepsize)
+        pg = IsGPOMDP.from_namespace(ns)
+        return PolicyGradient(pg, ns.stepsize)
     elif ns.algo == 'expgpomdp':
-        pgrad = ExpGPOMDP.from_namespace(policy, ns)
-        return PolicyGradient(policy, pgrad, ns.stepsize)
+        pg = ExpGPOMDP.from_namespace(ns)
+        return PolicyGradient(pg, ns.stepsize)
 
     raise ValueError(f'Algorithm `{ns.algo}` not recognized')

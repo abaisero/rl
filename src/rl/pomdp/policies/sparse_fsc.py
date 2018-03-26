@@ -19,22 +19,25 @@ import numpy.random as rnd
 IContext = namedtuple('IContext', 'n')
 IFeedback = namedtuple('IFeedback', 'n1')
 
-
 class SparseFSC(Policy):
-    def __init__(self, env, N, K):
-        super().__init__(env)
-        self.N = N  # number of nodes
+    def __init__(self, pomdp, nspace, K):
+        super().__init__(pomdp)
+        N = nspace.nelems
+
+        # self.N = N  # number of nodes
+        self.nspace = nspace
+        self.N = N
         self.K = K
 
-        nodes = [f'node_{i}' for i in range(N)]
+        # nodes = [f'node_{i}' for i in range(N)]
         # self.nspace = indextools.RangeSpace(K)
-        self.nspace = indextools.DomainSpace(nodes)
+        # self.nspace = indextools.DomainSpace(nodes)
         self.kspace = indextools.RangeSpace(K)
 
         # TODO first node should probably not be sparse..
 
-        self.amodel = models.Softmax(env.aspace, cond=(self.nspace,))
-        self.kmodel = models.Softmax(self.kspace, cond=(self.nspace, env.ospace))
+        self.amodel = models.Softmax(pomdp.aspace, cond=(nspace,))
+        self.kmodel = models.Softmax(self.kspace, cond=(nspace, pomdp.ospace))
 
         I = np.eye(N, dtype=np.int)
         fail = 0
@@ -54,8 +57,8 @@ class SparseFSC(Policy):
         self.nkn = nkn
         self.nn = nn
 
-        # TODO look at pgradient;  this won't work for some reason
-        # self.params = np.array([self.amodel.params, self.kmodel.params])
+    def __repr__(self):
+        return f'FSC_Sparse(N={self.N}, K={self.K})'
 
     @property
     def params(self):
@@ -72,11 +75,11 @@ class SparseFSC(Policy):
         self.kmodel.params = oparams
 
     def nk2n(self, n, k):
-        n1idx = self.nkn[:, k.idx, n.idx].nonzero()[0].item()
+        n1idx = self.nkn[:, k, n].nonzero()[0].item()
         return self.nspace.elem(n1idx)
 
     def nn2k(self, n, n1):
-        k1idx = self.nkn[n1.idx, :, n.idx].nonzero()[0].item()
+        k1idx = self.nkn[n1, :, n].nonzero()[0].item()
         return self.kspace.elem(k1idx)
 
     def dlogprobs(self, n, a, o, n1):
@@ -87,16 +90,13 @@ class SparseFSC(Policy):
         return dlogprobs
 
     def new_pcontext(self):
+        # TODO belief over initial node as well...?
         n = self.nspace.elem(0)
         return SimpleNamespace(n=n)
 
     def reset(self):
         self.amodel.reset()
         self.kmodel.reset()
-
-    # def restart(self):
-    #     pass
-    #     # self.n = self.nspace.elem(0)
 
     @property
     def nodes(self):
@@ -137,20 +137,15 @@ class SparseFSC(Policy):
         k = self.kmodel.sample(n, o)
         return self.nk2n(n, k)
 
-    def plot(self, nepisodes):
+    def plot(self, pomdp, nepisodes):
         self.neps = nepisodes
-        self.q, self.p = graph.sparsefscplot(self, nepisodes)
+        self.q, self.p = graph.sparsefscplot(self, pomdp, nepisodes)
         self.idx = 0
 
     def plot_update(self):
         adist = self.amodel.probs()
-        # NOTE this was just for bug
-        # adist /= adist.sum(axis=-1, keepdims=True)
-
         kdist = self.kmodel.probs()
-        # NOTE this was just for bug
-        # kdist /= kdist.sum(axis=-1, keepdims=True)
-        ndist = np.einsum('nok,mkn->mon', kdist, self.nkn)
+        ndist = np.einsum('nok,mkn->nom', kdist, self.nkn)
 
         self.q.put((self.idx, adist, ndist))
         self.idx += 1
@@ -183,4 +178,7 @@ class SparseFSC(Policy):
 
     @staticmethod
     def from_namespace(env, namespace):
-        return SparseFSC(env, namespace.n, namespace.k)
+        nodes = [f'node_{i}' for i in range(namespace.n)]
+        nspace = indextools.DomainSpace(nodes)
+
+        return SparseFSC(env, nspace, namespace.k)

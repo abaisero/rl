@@ -15,5 +15,3 @@ class ActionDistribution(dists.SpaceDistribution):
             self.env.actions,
             **kwargs
         )
-
-
