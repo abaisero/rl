@@ -1,0 +1,40 @@
+#!/usr/bin/zsh
+
+opts=(--runs 10 --episodes 10 --steps 10)
+# opts=(--runs 100 --episodes 20000 --steps 100)
+pomdp=tiger
+
+./learning.py $opts --out ${pomdp}_isgpomdp_fsc_3.npy $pomdp.pomdp isgpomdp fsc 3
+./learning.py $opts --out ${pomdp}_isgpomdp_fsc_4.npy $pomdp.pomdp isgpomdp fsc 4
+./learning.py $opts --out ${pomdp}_isgpomdp_fsc_5.npy $pomdp.pomdp isgpomdp fsc 5
+./learning.py $opts --out ${pomdp}_isgpomdp_fsc_6.npy $pomdp.pomdp isgpomdp fsc 6
+./learning.py $opts --out ${pomdp}_isgpomdp_fsc_7.npy $pomdp.pomdp isgpomdp fsc 7
+
+./learning.py $opts --out ${pomdp}_isgpomdp_fsc_3_3.npy $pomdp.pomdp isgpomdp fsc_sparse 5 3
+./learning.py $opts --out ${pomdp}_isgpomdp_fsc_3_3.npy $pomdp.pomdp isgpomdp fsc_sparse 6 3
+./learning.py $opts --out ${pomdp}_isgpomdp_fsc_3_4.npy $pomdp.pomdp isgpomdp fsc_sparse 6 4
+./learning.py $opts --out ${pomdp}_isgpomdp_fsc_7_3.npy $pomdp.pomdp isgpomdp fsc_sparse 7 3
+./learning.py $opts --out ${pomdp}_isgpomdp_fsc_7_4.npy $pomdp.pomdp isgpomdp fsc_sparse 7 4
+./learning.py $opts --out ${pomdp}_isgpomdp_fsc_7_5.npy $pomdp.pomdp isgpomdp fsc_sparse 7 5
+
+./learning.py $opts --out ${pomdp}_isgpomdp_fsc_structured_1.npy $pomdp.pomdp isgpomdp fsc_structured tiger.lin.1.fss
+./learning.py $opts --out ${pomdp}_isgpomdp_fsc_structured_2.npy $pomdp.pomdp isgpomdp fsc_structured tiger.lin.2.fss
+./learning.py $opts --out ${pomdp}_isgpomdp_fsc_structured_3.npy $pomdp.pomdp isgpomdp fsc_structured tiger.lin.3.fss
+
+./learning.py $opts --out ${pomdp}_expgpomdp_fsc_3.npy $pomdp.pomdp expgpomdp fsc --belief 3
+./learning.py $opts --out ${pomdp}_expgpomdp_fsc_4.npy $pomdp.pomdp expgpomdp fsc --belief 4
+./learning.py $opts --out ${pomdp}_expgpomdp_fsc_5.npy $pomdp.pomdp expgpomdp fsc --belief 5
+./learning.py $opts --out ${pomdp}_expgpomdp_fsc_6.npy $pomdp.pomdp expgpomdp fsc --belief 6
+./learning.py $opts --out ${pomdp}_expgpomdp_fsc_7.npy $pomdp.pomdp expgpomdp fsc --belief 7
+
+# TODO belief-sparse-FSC model does not have nmodel
+# ./learning.py $opts --out ${pomdp}_expgpomdp_fsc_3_3.npy $pomdp.pomdp expgpomdp fsc_sparse --belief 5 3
+# ./learning.py $opts --out ${pomdp}_expgpomdp_fsc_3_3.npy $pomdp.pomdp expgpomdp fsc_sparse --belief 6 3
+# ./learning.py $opts --out ${pomdp}_expgpomdp_fsc_3_4.npy $pomdp.pomdp expgpomdp fsc_sparse --belief 6 4
+# ./learning.py $opts --out ${pomdp}_expgpomdp_fsc_7_3.npy $pomdp.pomdp expgpomdp fsc_sparse --belief 7 3
+# ./learning.py $opts --out ${pomdp}_expgpomdp_fsc_7_4.npy $pomdp.pomdp expgpomdp fsc_sparse --belief 7 4
+# ./learning.py $opts --out ${pomdp}_expgpomdp_fsc_7_5.npy $pomdp.pomdp expgpomdp fsc_sparse --belief 7 5
+
+./learning.py $opts --out ${pomdp}_expgpomdp_fsc_structured_1.npy $pomdp.pomdp expgpomdp fsc_structured --belief tiger.lin.1.fss
+./learning.py $opts --out ${pomdp}_expgpomdp_fsc_structured_2.npy $pomdp.pomdp expgpomdp fsc_structured --belief tiger.lin.2.fss
+./learning.py $opts --out ${pomdp}_expgpomdp_fsc_structured_3.npy $pomdp.pomdp expgpomdp fsc_structured --belief tiger.lin.3.fss

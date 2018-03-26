@@ -71,10 +71,10 @@ def process_target(q, nepisodes, alabels, nlabels, olabels, amask, nmask):
     sys.exit(app.exec_())
 
 
-def structuredfscplot(fsc, nepisodes):
-    alabels = tuple(fsc.env.aspace.values)
+def structuredfscplot(fsc, pomdp, nepisodes):
+    alabels = tuple(pomdp.aspace.values)
     nlabels = tuple(fsc.nspace.values)
-    olabels = tuple(fsc.env.ospace.values)
+    olabels = tuple(pomdp.ospace.values)
     amask = fsc.amask
     nmask = fsc.nmask
 

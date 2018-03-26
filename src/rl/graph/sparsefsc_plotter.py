@@ -71,10 +71,10 @@ def process_target(q, nepisodes, alabels, nlabels, olabels, nnmask):
     sys.exit(app.exec_())
 
 
-def sparsefscplot(fsc, nepisodes):
-    alabels = tuple(fsc.env.aspace.values)
+def sparsefscplot(fsc, pomdp, nepisodes):
+    alabels = tuple(pomdp.aspace.values)
     nlabels = tuple(fsc.nspace.values)
-    olabels = tuple(fsc.env.ospace.values)
+    olabels = tuple(pomdp.ospace.values)
     nnmask = fsc.nn
 
     q = mp.Queue()

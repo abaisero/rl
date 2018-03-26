@@ -1,7 +1,11 @@
 from contextlib import contextmanager
 from pkg_resources import resource_filename
 
-from rl_parsers.pomdp import parse
+from rl_parsers.pomdp import parse as parse_pomdp
+
+import indextools
+import rl.pomdp as pomdp
+import numpy as np
 
 
 @contextmanager
@@ -16,14 +20,9 @@ def _open(fname):
     f.close()
 
 
-import indextools
-import rl.pomdp as pomdp
-import numpy as np
-
-
-def env(fname):
+def from_fname(fname):
     with _open(fname) as f:
-        dotpomdp = parse(f.read())
+        dotpomdp = parse_pomdp(f.read())
 
     if dotpomdp.values == 'cost':
         raise ValueError('I do not know how to handle `cost` values.')
@@ -35,27 +34,26 @@ def env(fname):
     sspace = indextools.DomainSpace(dotpomdp.states)
     aspace = indextools.DomainSpace(dotpomdp.actions)
     ospace = indextools.DomainSpace(dotpomdp.observations)
-
-    env = pomdp.Environment(sspace, aspace, ospace)
-    env.gamma = dotpomdp.discount
+    gamma = dotpomdp.discount
+    domain = pomdp.Domain(sspace, aspace, ospace, gamma=gamma)
 
     if dotpomdp.start is None:
-        start = np.ones(env.nstates) / env.nstates
+        start = np.ones(sspace.nelems) / sspace.nelems
     else:
         start = dotpomdp.start
     T = np.swapaxes(dotpomdp.T, 0, 1)
-    O = np.stack([dotpomdp.O] * env.nstates)
+    O = np.stack([dotpomdp.O] * sspace.nelems)
     R = np.einsum('jik', dotpomdp.R.mean(axis=-1))
 
-    s0model = pomdp.State0Distribution(env)
-    s1model = pomdp.State1Distribution(env)
-    omodel = pomdp.ObsDistribution(env)
-    rmodel = pomdp.RewardDistribution(env)
+    s0model = pomdp.State0Distribution(domain)
+    s1model = pomdp.State1Distribution(domain)
+    omodel = pomdp.ObsDistribution(domain)
+    rmodel = pomdp.RewardDistribution(domain)
 
     s0model.array = start
     s1model.array = T
     omodel.array = O
     rmodel.array = R
 
-    env.model = pomdp.Model(env, s0model, s1model, omodel, rmodel)
-    return env
+    domain.model = pomdp.Model(s0model, s1model, omodel, rmodel)
+    return domain

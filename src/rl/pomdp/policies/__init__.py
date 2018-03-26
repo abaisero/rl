@@ -46,20 +46,20 @@ from ._argparser import parser
 #         raise ValueError(f'Policy name {name} not recognized')
 
 
-def factory(env, ns):
+def factory(domain, ns):
     try:
         if ns.belief:
             ns.belief = False
-            fsc = factory(env, ns)
-            return BeliefFSC(env, fsc)
+            fsc = factory(domain, ns)
+            return BeliefFSC(domain, fsc)
     except AttributeError:
         pass
 
     if ns.policy == 'fsc':
-        return FSC.from_namespace(env, ns)
+        return FSC.from_namespace(domain, ns)
     elif ns.policy == 'fsc_sparse':
-        return SparseFSC.from_namespace(env, ns)
+        return SparseFSC.from_namespace(domain, ns)
     elif ns.policy == 'fsc_structured':
-        return StructuredFSC.from_namespace(env, ns)
+        return StructuredFSC.from_namespace(domain, ns)
 
     raise ValueError(f'Policy `{ns.policy}` not recognized')
