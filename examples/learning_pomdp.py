@@ -32,7 +32,7 @@ def parse_arguments():
             help='output file name', default=None)
 
     parser.add_argument('--processes', metavar='p', type=int,
-            help='number of processes', default=mp.cpu_count())
+            help='number of processes', default=mp.cpu_count()-1)
     parser.add_argument('--runs', type=int,
             help='number of training runs', default=10)
     parser.add_argument('--episodes', type=int,
