@@ -1,7 +1,7 @@
 #!/usr/bin/zsh
 
 opts=(--runs 10 --episodes 10 --steps 10)
-# opts=(--runs 100 --episodes 20000 --steps 100)
+# opts=(--runs 100 --episodes 5000 --steps 100)
 pomdp=heavenhell
 
 for N in `seq 3 7`; do
@@ -10,7 +10,7 @@ done
 
 for N in `seq 5 7`; do
 for K in `seq 3 $((N-2))`; do
-  ./learning.py $opts --out ${pomdp}_isgpomdp_fsc_${N}_${K}.npy $pomdp.pomdp isgpomdp fsc_sparse $N $K
+  ./learning.py $opts --out ${pomdp}_isgpomdp_fsc_sparse_${N}_${K}.npy $pomdp.pomdp isgpomdp fsc_sparse $N $K
 done
 done
 
@@ -21,6 +21,6 @@ done
 # TODO belief-sparse-FSC model does not have nmodel
 # for N in `seq 5 7`; do
 # for K in `seq 3 $((N-2))`; do
-#   ./learning.py $opts --out ${pomdp}_expgpomdp_fsc_${N}_${K}.npy $pomdp.pomdp expgpomdp fsc_sparse --belief $N $K
+#   ./learning.py $opts --out ${pomdp}_expgpomdp_fsc_sparse_${N}_${K}.npy $pomdp.pomdp expgpomdp fsc_sparse --belief $N $K
 # done
 # done
