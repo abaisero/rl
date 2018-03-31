@@ -4,23 +4,33 @@ opts=(--runs 10 --episodes 10 --steps 10)
 # opts=(--runs 100 --episodes 5000 --steps 100)
 pomdp=heavenhell
 
-for N in `seq 3 7`; do
-  ./learning.py $opts --out ${pomdp}_isgpomdp_fsc_$N.npy $pomdp.pomdp isgpomdp fsc $N
+# for N in `seq 3 7`; do
+for N in 3 5 10; do
+  ./learning_pomdp.py $opts --out ${pomdp}_isgpomdp_fsc_$N.npy $pomdp.pomdp isgpomdp fsc $N
 done
 
-for N in `seq 5 7`; do
-for K in `seq 3 $((N-2))`; do
-  ./learning.py $opts --out ${pomdp}_isgpomdp_fsc_sparse_${N}_${K}.npy $pomdp.pomdp isgpomdp fsc_sparse $N $K
+# for N in `seq 5 7`; do
+# for K in `seq 3 $((N-2))`; do
+for N in 10 15 20; do
+for K in $((N-5)) $((N-10)) $((N-15)); do
+if [[ $K -gt 0 ]]; then
+  ./learning_pomdp.py $opts --out ${pomdp}_isgpomdp_fscsparse_${N}_${K}.npy $pomdp.pomdp isgpomdp fsc_sparse $N $K
+fi
 done
 done
 
-for N in `seq 3 7`; do
-  ./learning.py $opts --out ${pomdp}_expgpomdp_fsc_$N.npy $pomdp.pomdp expgpomdp fsc --belief $N
+# for N in `seq 3 7`; do
+for N in 3 5 10; do
+  ./learning_pomdp.py $opts --out ${pomdp}_expgpomdp_fsc_$N.npy $pomdp.pomdp expgpomdp fsc --belief $N
 done
 
 # TODO belief-sparse-FSC model does not have nmodel
 # for N in `seq 5 7`; do
 # for K in `seq 3 $((N-2))`; do
-#   ./learning.py $opts --out ${pomdp}_expgpomdp_fsc_sparse_${N}_${K}.npy $pomdp.pomdp expgpomdp fsc_sparse --belief $N $K
+# for N in 10 15 20; do
+# for K in $((N-5)) $((N-10)) $((N-15)); do
+# if [[ $K -gt 0 ]]; then
+#   ./learning_pomdp.py $opts --out ${pomdp}_expgpomdp_fscsparse_${N}_${K}.npy $pomdp.pomdp expgpomdp fsc_sparse --belief $N $K
+# fi
 # done
 # done
