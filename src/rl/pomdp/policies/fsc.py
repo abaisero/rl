@@ -2,11 +2,10 @@ from .policy import Policy
 import rl.graph as graph
 
 import argparse
+from types import SimpleNamespace
 
 import indextools
 import rl.misc.models as models
-
-from types import SimpleNamespace
 
 import numpy as np
 
