@@ -78,3 +78,20 @@ class ExpectedSARSA(Agent):
 
         self.Q[s, a] += alpha * delta
         self.counts[s, a] += 1
+
+
+
+
+
+
+
+class SARSA(Algo):
+
+    def __init__(self):
+        super().__init__()
+
+    def __repr__(self):
+        return f'SARSA()'
+
+    def run(self, mdp):
+        # TODO different (mdp) SARSA API
