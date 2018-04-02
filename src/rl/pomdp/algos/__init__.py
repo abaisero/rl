@@ -4,6 +4,7 @@ from .psearch import PolicySearch
 from .gpomdp import GPOMDP
 from .isgpomdp import IsGPOMDP
 from .expgpomdp import ExpGPOMDP
+from .cfgpomdp import CFGPOMDP
 from .conjpomdp import CONJPOMDP
 
 from ._argparser import parser
@@ -39,6 +40,9 @@ def factory(ns):
         return PolicyGradient(pg, ns.stepsize)
     elif ns.algo == 'expgpomdp':
         pg = ExpGPOMDP.from_namespace(ns)
+        return PolicyGradient(pg, ns.stepsize)
+    elif ns.algo == 'cfgpomdp':
+        pg = CFGPOMDP.from_namespace(ns)
         return PolicyGradient(pg, ns.stepsize)
 
     raise ValueError(f'Algorithm `{ns.algo}` not recognized')

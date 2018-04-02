@@ -1,3 +1,4 @@
+from .cf import CF
 from .fsc import FSC
 from .sparse_fsc import SparseFSC
 from .structured_fsc import StructuredFSC
@@ -19,6 +20,8 @@ _subparsers.required = True
 # _parser = StructuredFSC.parser('fsc_structured')
 # _subparsers.add_parser('fsc_structured', parents=[_parser], help='Structured FSC')
 
+_parser = CF.parser
+_subparsers.add_parser('cf', parents=[_parser], help='CF')
 
 _parser = FSC.parser
 _subparsers.add_parser('fsc', parents=[_parser], help='FSC')

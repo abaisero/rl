@@ -38,10 +38,6 @@ class FSC(Policy):
         dlogprobs[1] = self.nmodel.dlogprobs(n, o, n1)
         return dlogprobs
 
-    def new_pcontext(self):
-        n = self.nspace.elem(0)
-        return SimpleNamespace(n=n)
-
     def reset(self):
         self.amodel.reset()
         self.nmodel.reset()
@@ -53,6 +49,10 @@ class FSC(Policy):
     @property
     def nnodes(self):
         return self.nspace.nelems
+
+    def new_pcontext(self):
+        n = self.nspace.elem(0)
+        return SimpleNamespace(n=n)
 
     def dist(self, pcontext):
         return self.amodel.dist(pcontext.n)
