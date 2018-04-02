@@ -1,7 +1,6 @@
 from .policy import Policy
 
-from .random import Random
-from .blind import Blind
+from .cf import CF
 from .reactive import Reactive
 from .fsc import FSC
 from .sparse_fsc import SparseFSC
@@ -47,15 +46,14 @@ from ._argparser import parser
 
 
 def factory(domain, ns):
-    try:
-        if ns.belief:
-            ns.belief = False
-            fsc = factory(domain, ns)
-            return BeliefFSC(domain, fsc)
-    except AttributeError:
-        pass
+    if getattr(ns, 'belief', False):
+        ns.belief = False
+        fsc = factory(domain, ns)
+        return BeliefFSC(domain, fsc)
 
-    if ns.policy == 'fsc':
+    if ns.policy == 'cf':
+        return CF.from_namespace(domain, ns)
+    elif ns.policy == 'fsc':
         return FSC.from_namespace(domain, ns)
     elif ns.policy == 'fsc_sparse':
         return SparseFSC.from_namespace(domain, ns)

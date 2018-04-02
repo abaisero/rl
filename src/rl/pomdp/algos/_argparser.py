@@ -1,6 +1,8 @@
 from .gpomdp import GPOMDP
 from .isgpomdp import IsGPOMDP
 from .expgpomdp import ExpGPOMDP
+
+from .cfgpomdp import CFGPOMDP
 import argparse
 
 
@@ -25,3 +27,6 @@ _subparsers.add_parser('isgpomdp', parents=[_parser], help='IsGPOMDP')
 
 _parser = ExpGPOMDP.parser
 _subparsers.add_parser('expgpomdp', parents=[_parser], help='ExpGPOMDP')
+
+_parser = CFGPOMDP.parser
+_subparsers.add_parser('cfgpomdp', parents=[_parser], help='CFGPOMDP')
