@@ -10,8 +10,8 @@ import string
 
 
 class Softmax(Model):
-    def __init__(self, *yspaces, cond=None):
-        super().__init__(*yspaces, cond=cond)
+    def __init__(self, *yspaces, cond=None, mask=None):
+        super().__init__(*yspaces, cond=cond, mask=mask)
         # NOTE np.prod would return float 1.0 if xshape is empty
         self.xsize = np.prod(self.xdims, dtype=np.int64)
         self.ysize = np.prod(self.ydims)
@@ -31,8 +31,8 @@ class Softmax(Model):
         self.reset()
 
     def reset(self):
-        # self.params = np.zeros(self.dims)
-        self.params = rnd.normal(size=self.dims)
+        self.params = np.zeros(self.dims)
+        # self.params = rnd.normal(size=self.dims)
         # self.params = 2 * rnd.normal(size=self.dims)
         # self.params = 3 * (.5 - rnd.random_sample(self.dims))
 
@@ -40,13 +40,14 @@ class Softmax(Model):
         return self.__phi[elems]
 
     def prefs(self, *elems):
-        return self.params[elems]
+        prefs = self.params
+        prefs[~self.mask] = -np.inf
+        return prefs[elems]
 
     def logprobs(self, *elems, normalized=True):
-        logprobs = prefs = self.params
+        logprobs = prefs = self.prefs()
         if normalized:
             logprobs -= logsumexp(prefs, axis=self.yaxes, keepdims=True)
-
         return logprobs[elems]
 
     def probs(self, *elems, normalized=True):

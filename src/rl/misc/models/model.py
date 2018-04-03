@@ -1,5 +1,8 @@
+import numpy as np
+
+
 class Model:
-    def __init__(self, *yspaces, cond=None):
+    def __init__(self, *yspaces, cond=None, mask=None):
         xspaces = () if cond is None else tuple(cond)
 
         self.xspaces = xspaces
@@ -13,3 +16,8 @@ class Model:
         self.xdims = tuple(map(len, self.xspaces))
         self.ydims = tuple(map(len, self.yspaces))
         self.dims = self.xdims + self.ydims
+
+        if mask is None:
+            mask = np.ones(self.dims, dtype=np.bool)
+
+        self.mask = mask

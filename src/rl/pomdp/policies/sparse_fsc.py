@@ -7,9 +7,9 @@ from rl.misc.argparse import GroupedAction
 import indextools
 import rl.misc.models as models
 
-
 from collections import namedtuple
 from types import SimpleNamespace
+import itertools as itt
 
 import numpy as np
 import numpy.linalg as la
@@ -23,39 +23,43 @@ class SparseFSC(Policy):
     def __init__(self, pomdp, nspace, K):
         super().__init__(pomdp)
         N = nspace.nelems
+        O = pomdp.nobs
 
-        # self.N = N  # number of nodes
         self.nspace = nspace
         self.N = N
         self.K = K
 
-        # nodes = [f'node_{i}' for i in range(N)]
-        # self.nspace = indextools.RangeSpace(K)
-        # self.nspace = indextools.DomainSpace(nodes)
-        self.kspace = indextools.RangeSpace(K)
+        _combs = list(itt.combinations(range(O), 2))
+        _test_mask = np.zeros((O, len(_combs)))
+        for i, comb in enumerate(_combs):
+            _test_mask[comb, i] = 1, -1
 
-        # TODO first node should probably not be sparse..
+        for nfails in itt.count():
+            if nfails == 100:
+                raise ValueError(f'Could not initialize {self}')
+
+            nmask = np.array([[
+                    rnd.permutation(N)
+                for _ in range(O)]
+                for _ in range(N)]) < K
+
+            # check that graph is not disjoint
+            _nn = nmask.sum(axis=1)
+            test = la.multi_dot([_nn] * N)
+            if np.any(test == 0):
+                continue
+
+            # check that each observation gives a different transition mask
+            test = np.einsum('hyg,yn->hng', nmask, _test_mask)
+            if np.all(test == 0, axis=0).any():
+                continue
+
+            break
 
         self.amodel = models.Softmax(pomdp.aspace, cond=(nspace,))
-        self.kmodel = models.Softmax(self.kspace, cond=(nspace, pomdp.ospace))
+        self.nmodel = models.Softmax(nspace, cond=(nspace, pomdp.ospace), mask=nmask)
+        self.nmask = nmask.T
 
-        I = np.eye(N, dtype=np.int)
-        fail = 0
-        while True:
-            cols = (rnd.choice(N, K, replace=False) for _ in range(N))
-            nkn = (I[:, col] for col in cols)
-            nkn = np.stack(nkn, axis=-1)
-            nn = nkn.sum(axis=1)
-
-            test = la.multi_dot([nn] * N)
-            if np.all(test > 0):
-                break
-            else:
-                if fail == 100:
-                    raise Exception
-                fail += 1
-        self.nkn = nkn
-        self.nn = nn
 
     def __repr__(self):
         return f'FSC_Sparse(N={self.N}, K={self.K})'
@@ -65,28 +69,27 @@ class SparseFSC(Policy):
         # TODO need better way to handle multiparametric models...
         # maybe just concatenate?  seems wrong..
         params = np.empty(2, dtype=object)
-        params[:] = self.amodel.params, self.kmodel.params
+        params[:] = self.amodel.params, self.nmodel.params
         return params
 
     @params.setter
     def params(self, value):
         aparams, oparams = value
         self.amodel.params = aparams
-        self.kmodel.params = oparams
+        self.nmodel.params = oparams
 
-    def nk2n(self, n, k):
-        n1idx = self.nkn[:, k, n].nonzero()[0].item()
-        return self.nspace.elem(n1idx)
+    # def nk2n(self, n, k):
+    #     n1idx = self.nkn[:, k, n].nonzero()[0].item()
+    #     return self.nspace.elem(n1idx)
 
-    def nn2k(self, n, n1):
-        k1idx = self.nkn[n1, :, n].nonzero()[0].item()
-        return self.kspace.elem(k1idx)
+    # def nn2k(self, n, n1):
+    #     k1idx = self.nkn[n1, :, n].nonzero()[0].item()
+    #     return self.kspace.elem(k1idx)
 
     def dlogprobs(self, n, a, o, n1):
         dlogprobs = np.empty(2, dtype=object)
         dlogprobs[0] = self.amodel.dlogprobs(n, a)
-        k1 = self.nn2k(n, n1)
-        dlogprobs[1] = self.kmodel.dlogprobs(n, o, k1)
+        dlogprobs[1] = self.nmodel.dlogprobs(n, o, n1)
         return dlogprobs
 
     def new_pcontext(self):
@@ -96,7 +99,7 @@ class SparseFSC(Policy):
 
     def reset(self):
         self.amodel.reset()
-        self.kmodel.reset()
+        self.nmodel.reset()
 
     @property
     def nodes(self):
@@ -134,8 +137,7 @@ class SparseFSC(Policy):
         return self.amodel.sample(pcontext.n)
 
     def sample_n(self, n, o):
-        k = self.kmodel.sample(n, o)
-        return self.nk2n(n, k)
+        return self.nmodel.sample(n, o)
 
     def plot(self, pomdp, nepisodes):
         self.neps = nepisodes
@@ -144,8 +146,7 @@ class SparseFSC(Policy):
 
     def plot_update(self):
         adist = self.amodel.probs()
-        kdist = self.kmodel.probs()
-        ndist = np.einsum('nok,mkn->nom', kdist, self.nkn)
+        ndist = self.nmodel.probs()
 
         self.q.put((self.idx, adist, ndist))
         self.idx += 1

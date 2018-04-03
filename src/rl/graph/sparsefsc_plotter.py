@@ -23,7 +23,7 @@ class DataThread(QtCore.QThread):
             self.ndata[idx] = ndist.T
 
 
-def process_target(q, nepisodes, alabels, nlabels, olabels, nnmask):
+def process_target(q, nepisodes, alabels, nlabels, olabels, nmask):
     na = len(alabels)
     nn = len(nlabels)
     no = len(olabels)
@@ -32,7 +32,7 @@ def process_target(q, nepisodes, alabels, nlabels, olabels, nnmask):
     adata = np.full(ashape, np.nan)
     nshape = nepisodes, nn, no, nn
     ndata = np.full(nshape, np.nan)
-    nmask = np.stack([nnmask] * no, axis=1)
+    # nmask = np.stack([nmask] * no, axis=1)
 
     app = QtGui.QApplication([])
     gui = FSCWindow().setup()
@@ -75,10 +75,10 @@ def sparsefscplot(fsc, pomdp, nepisodes):
     alabels = tuple(pomdp.aspace.values)
     nlabels = tuple(fsc.nspace.values)
     olabels = tuple(pomdp.ospace.values)
-    nnmask = fsc.nn
+    nmask = fsc.nmask
 
     q = mp.Queue()
-    p = mp.Process(target=process_target, args=(q, nepisodes, alabels, nlabels, olabels, nnmask))
+    p = mp.Process(target=process_target, args=(q, nepisodes, alabels, nlabels, olabels, nmask))
     p.daemon = True
     p.start()
     return q, p

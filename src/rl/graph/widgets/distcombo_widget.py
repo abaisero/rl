@@ -16,7 +16,7 @@ class DistComboWidget(QtWidgets.QWidget):
 
     def setup(self, data, ylabels, xlabels, wlabels, cidx, mask=None):
         if mask is None:
-            mask = np.ones(data.shape[1:], dtype=bool)
+            mask = np.ones(data.shape[1:], dtype=np.bool)
 
         self.data = data
         self.mask = mask
