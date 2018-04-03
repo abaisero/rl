@@ -1,4 +1,5 @@
 from .policy import Policy
+import rl.graph as graph
 
 import argparse
 from types import SimpleNamespace
@@ -38,6 +39,21 @@ class CF(Policy):
 
     def sample(self, pcontext):
         return self.amodel.sample()
+
+    def plot(self, pomdp, nepisodes):
+        self.neps = nepisodes
+        self.q, self.p = graph.cfplot(self, pomdp, nepisodes)
+        self.idx = 0
+
+    def plot_update(self):
+        adist = self.amodel.probs()
+
+        self.q.put((self.idx, adist))
+        self.idx += 1
+
+        if self.idx == self.neps:
+            self.q.put(None)
+
 
     parser = argparse.ArgumentParser(add_help=False)
 
