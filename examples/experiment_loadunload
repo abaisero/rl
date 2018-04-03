@@ -4,6 +4,8 @@ opts=(--runs 10 --episodes 10 --steps 10)
 # opts=(--runs 100 --episodes 5000 --steps 100)
 pomdp=loadunload
 
+./learning_pomdp.py $opts --out ${pomdp}_cfgpomdp_cf.npy ${pomdp}.pomdp cfgpomdp cf
+
 # for N in `seq 3 7`; do
 for N in 3 5 10; do
   ./learning_pomdp.py $opts --out ${pomdp}_isgpomdp_fsc_$N.npy $pomdp.pomdp isgpomdp fsc $N
