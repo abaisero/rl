@@ -1,99 +1,74 @@
-from .policy import Policy
-import rl.graph as graph
+import copy
+import types
 
 import rl.misc.models as models
+import rl.graph as graph
 
-from collections import namedtuple
 import numpy as np
 
 
-IContext = namedtuple('IContext', 'o')
-IFeedback = namedtuple('IFeedback', 'o1')
+class Reactive:
+    @staticmethod
+    def from_namespace(env, namespace):
+        return Reactive(env)
 
-
-class Reactive(Policy):
     def __init__(self, env):
-        super().__init__(env)
-        # TODO create node set? as extension of observation space?
-
-        self.a0model = models.Softmax(env.aspace)
-        self.amodel = models.Softmax(env.aspace, cond=[env.ospace])
-        # TODO look at pgradient;  this won't work for some reason
-        # self.params = self.amodel.params
+        self.aspace = env.aspace
+        self.ospace = env.ospace
+        self.models = (
+            models.Softmax([], [self.aspace.nelems]),
+            models.Softmax([self.ospace.nelems], [self.aspace.nelems]),
+        )
 
     @property
-    def params(self):
+    def a0model(self):
+        return self.models[0]
+
+    @property
+    def amodel(self):
+        return self.models[1]
+
+    def new_params(self):
         params = np.empty(2, dtype=object)
-        params[:] = self.a0model.params, self.amodel.params
+        params[0] = self.models[0].new_params()
+        params[1] = self.models[1].new_params()
         return params
 
-    @params.setter
-    def params(self, value):
-        a0params, aparams = value
-        self.a0model.params = a0params
-        self.amodel.params = aparams
+    def new_context(self, params):
+        return types.SimpleNamespace(o=None)
 
-    def dlogprobs(self, t, o, a):
-        dlogprobs = np.empty(2, dtype=object)
-        if t == 0:
-            dlogprobs[0] = self.a0model.dlogprobs(a)
-            dlogprobs[1] = 0
+    def step(self, params, pcontext, feedback, *, inline=True):
+        if not inline:
+            pcontext = copy.copy(pcontext)
+        pcontext.o = feedback.o
+
+        return pcontext
+
+    def dlogprobs(self, params, pcontext, a, feedback, pcontext1):
+        o = pcontext.o
+
+        dlogprobs = np.full(2, 0., dtype=object)
+        if o is None:
+            dlogprobs[0] = self.a0model.dlogprobs(params[0], (a,))
         else:
-            dlogprobs[0] = 0
-            dlogprobs[1] = self.amodel.dlogprobs(o, a)
+            dlogprobs[1] = self.amodel.dlogprobs(params[1], (o, a))
         return dlogprobs
 
-    def reset(self):
-        self.a0model.reset()
-        self.amodel.reset()
+    def pr_a(self, params, pcontext):
+        if pcontext.o is None:
+            return self.a0model.pr(params[0], ())
+        else:
+            return self.amodel.pr(params[1], (pcontext.o,))
 
-    def restart(self):
-        self.o = None
+    def sample_a(self, params, pcontext):
+        if pcontext.o is None:
+            ai, = self.a0model.sample(params[0], ())
+        else:
+            ai, = self.amodel.sample(params[1], (pcontext.o,))
+        return self.aspace.elem(ai)
 
-    @property
-    def context(self):
-        return IContext(self.o)
+    def new_plot(self, nepisodes):
+        return graph.Reactive_Plotter(self, nepisodes)
 
-    def feedback(self, feedback):
-        return self.feedback_o(feedback.o)
-
-    def feedback_o(self, o):
-        self.o = o
-        return IFeedback(o1=o)
-
-    def dist(self):
-        if self.o is None:
-            return self.a0model.dist()
-        return self.amodel.dist(self.o)
-
-    def pr(self, a):
-        if self.o is None:
-            return self.a0model.pr(a)
-        return self.amodel.pr(self.o, a)
-
-    def sample(self):
-        if self.o is None:
-            return self.a0model.sample()
-        return self.amodel.sample(self.o)
-
-    def plot(self, nepisodes):
-        self.neps = nepisodes
-        self.q, self.p = graph.reactiveplot(self, nepisodes)
-        self.idx = 0
-
-    def plot_update(self):
-        a0dist = self.a0model.probs()
-        a0dist /= a0dist.sum(axis=-1, keepdims=True)
-
-        adist = self.amodel.probs()
-        adist /= adist.sum(axis=-1, keepdims=True)
-
-        self.q.put((self.idx, a0dist, adist))
-        self.idx += 1
-
-        if self.idx == self.neps:
-            self.q.put(None)
-
-    @staticmethod
-    def add_to_parser(parser):
-        pass
+    def __repr__(self):
+        return f'Reactive(|O|={self.ospace.nelems})'

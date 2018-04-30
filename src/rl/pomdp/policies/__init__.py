@@ -1,63 +1,55 @@
-from .policy import Policy
+import argparse
 
 from .cf import CF
 from .reactive import Reactive
 from .fsc import FSC
-from .sparse_fsc import SparseFSC
-from .structured_fsc import StructuredFSC
-from .bfsc import BeliefFSC
-
-from ._argparser import parser
+from .fsc_sparse import FSC_Sparse
+from .fsc_structured import FSC_Structured
+from .fsc_file import FSC_File
 
 
+parser = argparse.ArgumentParser(description='Policy')
+_subparsers = parser.add_subparsers(title='Policy', dest='policy')
+_subparsers.required = True
+
+_parser = _subparsers.add_parser('cf', help='CF')
+
+_parser = _subparsers.add_parser('reactive', help='Reactive')
+
+_parser = _subparsers.add_parser('fsc', help='FSC')
+_parser.add_argument('n', type=int)
+
+_parser = _subparsers.add_parser('fsc_sparse', help='FSC_Sparse')
+_parser.add_argument('n', type=int)
+_parser.add_argument('k', type=int)
+
+_parser = _subparsers.add_parser('fsc_structured', help='FSC_Structured')
+_parser.add_argument('fss', type=str)
+
+_parser = _subparsers.add_parser('fsc_file', help='FSC_File')
+_parser.add_argument('fsc', type=str)
 
 
+def factory(env, argstr):
+    args = parser.parse_args(argstr.split())
 
-# def add_subparsers(parser, title='Policy', dest='policy'):
-#     subparsers = parser.add_subparsers(title=title, dest=dest)
+    # if getattr(args, 'belief', False):
+    #     args.belief = False
+    #     fsc = factory(env, args)
+    #     return BeliefFSC(env, fsc)
 
-#     _parser = FSC.parser('fsc')
-#     p = subparsers.add_parser('fsc', parents=[_parser], help='FSC')
+    if args.policy == 'cf':
+        return CF.from_namespace(env, args)
+    elif args.policy == 'reactive':
+        return Reactive.from_namespace(env, args)
+    elif args.policy == 'fsc':
+        return FSC.from_namespace(env, args)
+    elif args.policy == 'fsc_sparse':
+        return FSC_Sparse.from_namespace(env, args)
+    elif args.policy == 'fsc_structured':
+        return FSC_Structured.from_namespace(env, args)
 
-#     print('this')
-#     global _blarg
-#     if not _blarg:
-#         _blarg = True
-#         add_subparsers(p)
+    if args.policy == 'fsc_file':
+        return FSC_File.from_namespace(env, args)
 
-#     _parser = SparseFSC.parser('fsc_sparse')
-#     subparsers.add_parser('fsc_sparse', parents=[_parser], help='Sparse FSC')
-
-#     _parser = StructuredFSC.parser('fsc_structured')
-#     subparsers.add_parser('fsc_structured', parents=[_parser], help='Structured FSC')
-
-
-# def policy_cls(name, ns):
-#     # TODO random, blind and reactive...
-#     # TODO FUCK FUCK FUCK factory!
-#     if name == 'fsc':
-#         return FSC
-#     elif name == 'fsc_sparse':
-#         return SparseFSC
-#     elif name == 'fsc_structured':
-#         return StructuredFSC
-#     else:
-#         raise ValueError(f'Policy name {name} not recognized')
-
-
-def factory(domain, ns):
-    if getattr(ns, 'belief', False):
-        ns.belief = False
-        fsc = factory(domain, ns)
-        return BeliefFSC(domain, fsc)
-
-    if ns.policy == 'cf':
-        return CF.from_namespace(domain, ns)
-    elif ns.policy == 'fsc':
-        return FSC.from_namespace(domain, ns)
-    elif ns.policy == 'fsc_sparse':
-        return SparseFSC.from_namespace(domain, ns)
-    elif ns.policy == 'fsc_structured':
-        return StructuredFSC.from_namespace(domain, ns)
-
-    raise ValueError(f'Policy `{ns.policy}` not recognized')
+    raise ValueError(f'Policy `{args.policy}` not recognized')

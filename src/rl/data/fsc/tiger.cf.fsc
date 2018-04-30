@@ -1,0 +1,8 @@
+nodes: 1
+actions: listen open-left open-right
+observations: obs-left obs-right
+
+start: 0
+
+A: * 1 0 0
+T: * identity

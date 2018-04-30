@@ -40,3 +40,24 @@ class CFGPOMDP(Algo):
     @staticmethod
     def from_namespace(namespace):
         return CFGPOMDP(namespace.beta)
+
+
+def cfgpomdp(params, policy, env, nsteps=100, beta=None):
+    if beta is None:
+        beta = env.gamma
+
+    g = 0.
+    z, d = 0, 0
+
+    econtext = env.new_context()
+    pcontext = policy.new_pcontext()
+    while econtext.t < nsteps:
+        a = policy.sample_a(params, pcontext)
+        feedback, econtext = env.step(econtext, a)
+        pcontext1 = policy.step(params, pcontext, feedback, inline=False)
+
+        z = beta * z + policy.dlogprobs(params, pcontext, a, feedback, pcontext1)
+        d += (feedback.r * z - d) / (t+1)
+        pcontext = pcontext1
+
+    return g, d

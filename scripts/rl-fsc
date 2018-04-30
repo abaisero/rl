@@ -4,5 +4,6 @@ from pkg_resources import resource_filename, resource_listdir
 
 if __name__ == '__main__':
     for fname in resource_listdir('rl', f'data/fsc'):
-        if fname.endswith('.fsc'):
-            print(fname.replace('.fsc', ''))
+        print(fname)
+        # if fname.endswith('.fsc'):
+        #     print(fname.replace('.fsc', ''))

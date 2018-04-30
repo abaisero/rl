@@ -22,8 +22,8 @@ class PPlotWidget(pg.GraphicsLayoutWidget):
         plt_pp.addLegend(offset=(-30, -30))
         plt_pp.showGrid(x=True, y=True)
 
-
-        self.curves_pp = {p: plt_pp.plot(**pdata) for p, pdata in pdict.items()}
+        self.curves_pp = {p: plt_pp.plot(**pdata)
+                          for p, pdata in pdict.items()}
 
         # TODO change to pg colormap
         import matplotlib.cm as cm
@@ -36,7 +36,8 @@ class PPlotWidget(pg.GraphicsLayoutWidget):
 
         plt_rp.showAxis('right')
         plt_rp.showGrid(x=True, y=True)
-        self.curves_rp = [plt_rp.plot(pen=cmap(i%cmap.N, bytes=True)) for i in range(data.shape[0])]
+        self.curves_rp = [plt_rp.plot(pen=cmap(i % cmap.N, bytes=True))
+                          for i in range(data.shape[0])]
         # TODO too many curves will break this
 
         # def setRange(rect=None, xRange=None, yRange=None, *args, **kwds):
@@ -68,7 +69,8 @@ class PPlotWidget(pg.GraphicsLayoutWidget):
         for p, pdata in zip(self.percentiles, nanpercentiles):
             self.curves_pp[p].setData(pdata)
 
-        # TODO optimize this.. don't use visible/non-visible stuff.. actually add/remove plots!!!
+        # TODO optimize this.. don't use visible/non-visible stuff..
+        # actually add/remove plots!!!
         for c, d, anyn, alln in zip(self.curves_rp, self.data, anynan, allnan):
             if anyn and not alln:
                 c.setVisible(True)

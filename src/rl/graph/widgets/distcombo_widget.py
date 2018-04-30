@@ -1,6 +1,5 @@
 from PyQt5 import QtWidgets
 from .design.distcombo_widget import Ui_Form
-from .dist_widget import DistWidget
 
 import numpy as np
 
@@ -41,12 +40,14 @@ class DistComboWidget(QtWidgets.QWidget):
 
     @property
     def dw_mask(self):
-        idx = tuple(self.widx if i == self.cidx-1 else slice(None) for i in range(3))
+        idx = tuple(self.widx if i == self.cidx - 1 else slice(None)
+                    for i in range(3))
         return self.mask[idx]
 
     @property
     def dw_data(self):
-        idx = tuple(self.widx if i == self.cidx else slice(None) for i in range(4))
+        idx = tuple(self.widx if i == self.cidx else slice(None)
+                    for i in range(4))
         return self.data[idx]
 
     def update(self):

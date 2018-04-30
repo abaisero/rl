@@ -1,11 +1,8 @@
-import multiprocessing as mp
-import threading
-import queue
 import sys
+import multiprocessing as mp
 
 from pyqtgraph.Qt import QtGui, QtCore
-import pyqtgraph as pg
-from .widgets import DistWidget, DistComboWidget, FSCWindow
+from .widgets import DistWidget, FSCWindow
 
 import numpy as np
 
@@ -57,11 +54,25 @@ def process_target(q, nepisodes, alabels):
     sys.exit(app.exec_())
 
 
-def cfplot(fsc, pomdp, nepisodes):
-    alabels = tuple(pomdp.aspace.values)
+class CF_Plotter:
+    def __init__(self, cf, nepisodes):
+        self.cf = cf
 
-    q = mp.Queue()
-    p = mp.Process(target=process_target, args=(q, nepisodes, alabels))
-    p.daemon = True
-    p.start()
-    return q, p
+        alabels = tuple(cf.aspace.values)
+
+        self.q = mp.Queue()
+        args = self.q, nepisodes, alabels
+        self.p = mp.Process(target=process_target, args=args)
+        self.p.daemon = True
+        self.p.start()
+
+        self.idx = 0
+
+    def update(self, params):
+        aprobs = self.cf.amodel.probs(params[0], ())
+
+        self.q.put((self.idx, aprobs))
+        self.idx += 1
+
+    def close(self):
+        self.q.put(None)

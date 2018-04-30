@@ -1,0 +1,8 @@
+nodes: 1
+actions: right left
+observations: loading unloading travel
+
+start: 0
+
+A: * .5 .5
+T: * identity

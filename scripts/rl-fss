@@ -1,0 +1,9 @@
+#!/usr/bin/env python
+
+from pkg_resources import resource_filename, resource_listdir
+
+if __name__ == '__main__':
+    for fname in resource_listdir('rl', f'data/fss'):
+        print(fname)
+        # if fname.endswith('.fss'):
+        #     print(fname.replace('.fss', ''))

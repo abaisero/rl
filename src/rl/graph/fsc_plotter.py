@@ -1,10 +1,7 @@
-import multiprocessing as mp
-import threading
-import queue
 import sys
+import multiprocessing as mp
 
 from pyqtgraph.Qt import QtGui, QtCore
-import pyqtgraph as pg
 from .widgets import DistWidget, DistComboWidget, FSCWindow
 
 import numpy as np
@@ -70,13 +67,28 @@ def process_target(q, nepisodes, alabels, nlabels, olabels):
     sys.exit(app.exec_())
 
 
-def fscplot(fsc, pomdp, nepisodes):
-    alabels = tuple(pomdp.aspace.values)
-    nlabels = tuple(fsc.nspace.values)
-    olabels = tuple(pomdp.ospace.values)
+class FSC_Plotter:
+    def __init__(self, fsc, nepisodes):
+        self.fsc = fsc
 
-    q = mp.Queue()
-    p = mp.Process(target=process_target, args=(q, nepisodes, alabels, nlabels, olabels))
-    p.daemon = True
-    p.start()
-    return q, p
+        alabels = tuple(fsc.aspace.values)
+        nlabels = tuple(fsc.nspace.values)
+        olabels = tuple(fsc.ospace.values)
+
+        self.q = mp.Queue()
+        args = self.q, nepisodes, alabels, nlabels, olabels
+        self.p = mp.Process(target=process_target, args=args)
+        self.p.daemon = True
+        self.p.start()
+
+        self.idx = 0
+
+    def update(self, params):
+        aprobs = self.fsc.amodel.probs(params[0], ())
+        nprobs = self.fsc.nmodel.probs(params[1], ())
+
+        self.q.put((self.idx, aprobs, nprobs))
+        self.idx += 1
+
+    def close(self):
+        self.q.put(None)

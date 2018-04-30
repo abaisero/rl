@@ -1,10 +1,7 @@
 import multiprocessing as mp
-import threading
-import queue
 import sys
 
 from pyqtgraph.Qt import QtGui, QtCore
-import pyqtgraph as pg
 from .widgets import DistWidget, DistComboWidget, FSCWindow
 
 import numpy as np
@@ -32,12 +29,13 @@ def process_target(q, nepisodes, alabels, nlabels, olabels, amask, nmask):
     adata = np.full(ashape, np.nan)
     nshape = nepisodes, nn, no, nn
     ndata = np.full(nshape, np.nan)
-    nmask = np.stack([nmask] * no, axis=1)
 
     app = QtGui.QApplication([])
     gui = FSCWindow().setup()
     gui.setWindowTitle('FSC')
 
+    print('amask.shape', amask.shape)
+    print('nmask.shape', nmask.shape)
     gui.addTab(
         DistWidget().setup(adata, alabels, nlabels, amask),
         'A-Strategy',
@@ -71,15 +69,29 @@ def process_target(q, nepisodes, alabels, nlabels, olabels, amask, nmask):
     sys.exit(app.exec_())
 
 
-def structuredfscplot(fsc, pomdp, nepisodes):
-    alabels = tuple(pomdp.aspace.values)
-    nlabels = tuple(fsc.nspace.values)
-    olabels = tuple(pomdp.ospace.values)
-    amask = fsc.amask
-    nmask = fsc.nmask
+class FSC_Structured_Plotter:
+    def __init__(self, fsc, nepisodes):
+        self.fsc = fsc
 
-    q = mp.Queue()
-    p = mp.Process(target=process_target, args=(q, nepisodes, alabels, nlabels, olabels, amask, nmask))
-    p.daemon = True
-    p.start()
-    return q, p
+        alabels = tuple(fsc.aspace.values)
+        nlabels = tuple(fsc.nspace.values)
+        olabels = tuple(fsc.ospace.values)
+
+        self.q = mp.Queue()
+        args = (self.q, nepisodes, alabels, nlabels, olabels, fsc.amask,
+                fsc.nmask)
+        self.p = mp.Process(target=process_target, args=args)
+        self.p.daemon = True
+        self.p.start()
+
+        self.idx = 0
+
+    def update(self, params):
+        aprobs = self.fsc.amodel.probs(params[0], ())
+        nprobs = self.fsc.nmodel.probs(params[1], ())
+
+        self.q.put((self.idx, aprobs, nprobs))
+        self.idx += 1
+
+    def close(self):
+        self.q.put(None)

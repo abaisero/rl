@@ -1,40 +1,75 @@
 import copy
 import types
+import itertools as itt
 
 import indextools
 import rl.misc.models as models
 import rl.graph as graph
 
 import numpy as np
+import numpy.linalg as la
+import numpy.random as rnd
 
 
-class FSC:
+class FSC_Sparse:
     @staticmethod
     def from_namespace(env, namespace):
         nodes = [f'node_{i}' for i in range(namespace.n)]
         nspace = indextools.DomainSpace(nodes)
 
-        return FSC(env, nspace)
+        return FSC_Sparse(env, nspace, namespace.k)
 
-    def __init__(self, env, nspace):
+    def __init__(self, env, nspace, K):
         self.aspace = env.aspace
         self.ospace = env.ospace
         self.nspace = nspace
+        self.K = K
+
+        _combs = list(itt.combinations(range(env.nobs), 2))
+        _test_mask = np.zeros((env.nobs, len(_combs)))
+        for i, comb in enumerate(_combs):
+            _test_mask[comb, i] = 1, -1
+
+        for nfails in itt.count():
+            if nfails == 100:
+                raise ValueError(f'Could not initialize {self}')
+
+            nmask = np.array([
+                [rnd.permutation(self.nnodes) for _ in range(env.nobs)]
+                for _ in range(self.nnodes)]) < K
+
+            # check that graph is not disjoint
+            _nn = nmask.sum(axis=1)
+            test = la.multi_dot([_nn] * self.nnodes)
+            if np.any(test == 0):
+                continue
+
+            # check that each observation gives a different transition mask
+            test = np.einsum('hyg,yn->hng', nmask, _test_mask)
+            if np.all(test == 0, axis=0).any():
+                continue
+
+            break
+
+        self.nmask = nmask
 
         nn, na, no = self.nspace.nelems, self.aspace.nelems, self.ospace.nelems
-
         self.models = (
             models.Softmax([nn], [na]),
-            models.Softmax([nn, no], [nn]),
+            models.Softmax([nn, no], [nn], mask=nmask),
         )
 
     @property
     def nodes(self):
-        return self.nspace.elems
+        return self.nspace.nelems
 
     @property
     def nnodes(self):
         return self.nspace.nelems
+
+    @property
+    def nmodels(self):
+        return len(self.models)
 
     @property
     def amodel(self):
@@ -54,7 +89,7 @@ class FSC:
         return types.SimpleNamespace(n=self.nspace.elem(0))
 
     def step(self, params, pcontext, feedback, *, inline=True):
-        n1 = self.sample_n1(params, pcontext, feedback)
+        n1 = self.sample_n(params, pcontext, feedback)
 
         if not inline:
             pcontext = copy.copy(pcontext)
@@ -86,12 +121,12 @@ class FSC:
     def pr_n(self, params, pcontext, feedback):
         return self.nmodel.pr(params[1], (pcontext.n, feedback.o))
 
-    def sample_n1(self, params, pcontext, feedback):
+    def sample_n(self, params, pcontext, feedback):
         ni, = self.nmodel.sample(params[1], (pcontext.n, feedback.o))
         return self.nspace.elem(ni)
 
     def new_plot(self, nepisodes):
-        return graph.FSC_Plotter(self, nepisodes)
+        return graph.FSC_Sparse_Plotter(self, nepisodes)
 
     def __repr__(self):
-        return f'FSC(|N|={self.nnodes}, |A|={self.aspace.nelems})'
+        return f'FSC_Sparse(N={self.nnodes}, K={self.K})'

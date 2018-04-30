@@ -4,14 +4,20 @@ import numpy as np
 import numpy.random as rnd
 from scipy.special import logsumexp
 
-import pytk.probability as probability
-
 import string
 
 
 class Softmax(Model):
-    def __init__(self, *yspaces, cond=None, mask=None):
-        super().__init__(*yspaces, cond=cond, mask=mask)
+    def __init__(self, xdims, ydims, mask=None):
+        self.mask = mask
+        self.xdims = xdims
+        self.ydims = ydims
+        self.dims = xdims + ydims
+
+        self.xrank = len(xdims)
+        self.yrank = len(ydims)
+        self.rank = self.xrank + self.yrank
+
         # NOTE np.prod would return float 1.0 if xshape is empty
         self.xsize = np.prod(self.xdims, dtype=np.int64)
         self.ysize = np.prod(self.ydims)
@@ -20,91 +26,67 @@ class Softmax(Model):
         self.xaxes = tuple(range(self.xrank))
         self.yaxes = tuple(range(self.xrank, self.rank))
 
-        # subscripts for np.einsum
         self.xss = string.ascii_lowercase[:self.xrank]
         self.yss = string.ascii_lowercase[self.xrank:self.rank]
         self.ss = self.xss + self.yss
 
-        # precomputed features (done once)
         self.__phi = np.eye(self.size).reshape(2 * self.dims)
 
-        self.reset()
+    def new_params(self):
+        params = np.zeros(self.dims)
+        try:
+            nmask = ~self.mask
+        except TypeError:
+            pass
+        else:
+            params[nmask] = -np.inf
+        return params
 
-    def reset(self):
-        self.params = np.zeros(self.dims)
-        # self.params = rnd.normal(size=self.dims)
-        # self.params = 2 * rnd.normal(size=self.dims)
-        # self.params = 3 * (.5 - rnd.random_sample(self.dims))
+    def prefs(self, params, elems):
+        return params[elems]
 
-    def phi(self, *elems):
-        return self.__phi[elems]
-
-    def prefs(self, *elems):
-        prefs = self.params
-        prefs[~self.mask] = -np.inf
-        return prefs[elems]
-
-    def logprobs(self, *elems, normalized=True):
-        logprobs = prefs = self.prefs()
-        if normalized:
-            logprobs -= logsumexp(prefs, axis=self.yaxes, keepdims=True)
+    def logprobs(self, params, elems):
+        logprobs = params - logsumexp(params, axis=self.yaxes, keepdims=True)
         return logprobs[elems]
 
-    def probs(self, *elems, normalized=True):
-        logprobs = self.logprobs(normalized=False)
-        probs = np.exp(logprobs - logprobs.max())
-        if normalized:
-            probs /= probs.sum(axis=self.yaxes, keepdims=True)
+    def probs(self, params, elems):
+        logprobs = self.logprobs(params, elems)
+        return np.exp(logprobs)
 
-        return probs[elems]
+    def phi(self, params, elems):
+        return self.__phi[elems]
 
-    def dprefs(self, *elems):
-        return self.phi(*elems)
+    def dprefs(self, params, elems):
+        return self.phi(params, elems)
 
-    def dlogprobs(self, *elems):
+    def dlogprobs(self, params, elems):
         # TODO improve performance
-        xelems = elems[:self.xrank]
-        dprefs = self.dprefs()
-        probs = self.probs()
+        dprefs = self.dprefs(params, ())
+        probs = self.probs(params, ())
 
-        reshapekey = (slice(None),) * self.xrank + (np.newaxis,) * self.yrank + (...,)
+        reshapekey = (
+            (slice(None),) * self.xrank +
+            (np.newaxis,) * self.yrank +
+            (...,)
+        )
+
         ss = f'{self.ss},{self.ss}...->{self.xss}...'
         dlogprobs = dprefs - np.einsum(ss, probs, dprefs)[reshapekey]
         return dlogprobs[elems]
 
-    def dprobs(self, *elems):
-        probs = self.probs(*elems)
-        dlogprobs = self.dlogprobs(*elems)
-        broadcast = (...,) + (np.newaxis,)*self.rank
+    def dprobs(self, params, elems):
+        probs = self.probs(params, elems)
+        dlogprobs = self.dlogprobs(params, elems)
+        broadcast = (...,) + self.rank * (np.newaxis,)
         return probs[broadcast] * dlogprobs
 
-    #
+    def sample(self, params, xelems):
+        if len(xelems) != self.xrank:
+            raise ValueError(
+                f'{self.xrank} inputs should be given;  {len(xelems)} '
+                'given instead!')
 
-    def dist(self, *xelems):
-        assert len(xelems) == self.xrank
-
-        probs = self.probs(*xelems)
-        for yi in range(self.ysize):
-            yidxs = np.unravel_index(yi, self.ydims)
-            yelems = tuple(f.elem(i) for f, i in zip(self.yspaces, yidxs))
-            yield yelems + (probs[yidxs],)
-
-    def pr(self, *elems):
-        assert len(elems) == self.rank
-
-        return self.probs(*elems)
-
-    def sample(self, *xelems):
-        assert len(xelems) == self.xrank
-
-        # TODO kinda like a JointFactory but without names;  just indices?
-
-        probs = self.probs(*xelems).ravel()
-        # yi = rnd.choice(self.ysize, p=probs)
+        probs = self.probs(params, xelems).ravel()
         yi = rnd.multinomial(1, probs).argmax()
-        yidxs = np.unravel_index(yi, self.ydims)
-        yelems = tuple(f.elem(i) for f, i in zip(self.yspaces, yidxs))
-
-        if len(yelems) == 1:
-            return yelems[0]
-        return yelems
+        ys = np.unravel_index(yi, self.ydims)
+        return ys

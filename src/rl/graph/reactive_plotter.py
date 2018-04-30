@@ -1,11 +1,8 @@
-import multiprocessing as mp
-import threading
-import queue
 import sys
+import multiprocessing as mp
 
 from pyqtgraph.Qt import QtGui, QtCore
-import pyqtgraph as pg
-from .widgets import DistWidget, DistComboWidget, FSCWindow
+from .widgets import DistWidget
 
 import numpy as np
 
@@ -19,14 +16,14 @@ class DataThread(QtCore.QThread):
     def run(self):
         for idx, a0dist, adist in iter(self.q.get, None):
             self.data[idx, :, 0] = a0dist
-            self.data[idx, :, 1:] = adist
+            self.data[idx, :, 1:] = adist.T
 
 
 def process_target(q, nepisodes, alabels, olabels):
     na = len(alabels)
     no = len(olabels)
 
-    olabels.insert(0, '*')
+    olabels = ('*',) + olabels
 
     shape = nepisodes, na, no + 1
     data = np.full(shape, np.nan)
@@ -50,12 +47,27 @@ def process_target(q, nepisodes, alabels, olabels):
     sys.exit(app.exec_())
 
 
-def reactiveplot(reactive, nepisodes):
-    alabels = reactive.env.aspace.values
-    olabels = reactive.env.ospace.values
+class Reactive_Plotter:
+    def __init__(self, reactive, nepisodes):
+        self.reactive = reactive
 
-    q = mp.Queue()
-    p = mp.Process(target=process_target, args=(q, nepisodes, alabels, olabels))
-    p.daemon = True
-    p.start()
-    return q, p
+        alabels = tuple(reactive.aspace.values)
+        olabels = tuple(reactive.ospace.values)
+
+        self.q = mp.Queue()
+        args = self.q, nepisodes, alabels, olabels
+        self.p = mp.Process(target=process_target, args=args)
+        self.p.daemon = True
+        self.p.start()
+
+        self.idx = 0
+
+    def update(self, params):
+        a0probs = self.reactive.a0model.probs(params[0], ())
+        aprobs = self.reactive.amodel.probs(params[1], ())
+
+        self.q.put((self.idx, a0probs, aprobs))
+        self.idx += 1
+
+    def close(self):
+        self.q.put(None)

@@ -7,8 +7,16 @@ import pytk.probability as probability
 
 
 class Tabular(Model):
-    def __init__(self, *yspaces, cond=None):
-        super().__init__(*yspaces, cond=cond)
+    def __init__(self, xdims, ydims, probs):
+        self.probs = probs
+        self.xdims = xdims
+        self.ydims = ydims
+        self.dims = xdims + ydims
+
+        self.xrank = len(xdims)
+        self.yrank = len(ydims)
+        self.rank = self.xrank + self.yrank
+
         # NOTE np.prod would return float 1.0 if xshape is empty
         self.xsize = np.prod(self.xdims, dtype=np.int64)
         self.ysize = np.prod(self.ydims)
@@ -17,82 +25,56 @@ class Tabular(Model):
         self.xaxes = tuple(range(self.xrank))
         self.yaxes = tuple(range(self.xrank, self.rank))
 
-        self.reset()
+        self.xss = string.ascii_lowercase[:self.xrank]
+        self.yss = string.ascii_lowercase[self.xrank:self.rank]
+        self.ss = self.xss + self.yss
 
-    def reset(self):
-        self.params = np.ones(self.dims)
-        self[:] = 1
+    def logprobs(self, elems):
+        logprobs = params - logsumexp(params, axis=self.yaxes, keepdims=True)
+        return logprobs[elems]
 
-    def __getitem__(self, elems):
-        idxs = self.indices(elems)
-        return self.params[idxs]
+    def probs(self, elems):
+        logprobs = self.logprobs(params, elems)
+        return np.exp(logprobs)
 
-    def __setitem__(self, elems, value):
-        idxs = self.indices(elems)
-        self.params[idxs] = value
-        params_normal = probability.normal(self.params)
-        params_conditional = probability.conditional(params_normal, axis=self.xaxes)
-        self.params = params_conditional
+    def phi(self, params, elems):
+        return self.__phi[elems]
 
-    @staticmethod
-    def index(elem):
-        try:
-            return elem.idx
-        except AttributeError:
-            pass
+    def dprefs(self, params, elems):
+        return self.phi(params, elems)
 
-        if elem is None: return slice(None)
-        # if elem is Ellipsis: return slice(None)
-        if isinstance(elem, slice): return elem
+    def dlogprobs(self, params, elems):
+        # TODO improve performance
+        xelems = elems[:self.xrank]
+        # dprefs = self.dprefs(params, elems)
+        # probs = self.probs(params, elems)
+        dprefs = self.dprefs(params, ())
+        probs = self.probs(params, ())
 
-        assert False, 'Type of `elem` unknown?'
+        reshapekey = (slice(None),) * self.xrank + (np.newaxis,) * self.yrank + (...,)
+        ss = f'{self.ss},{self.ss}...->{self.xss}...'
+        dlogprobs = dprefs - np.einsum(ss, probs, dprefs)[reshapekey]
+        return dlogprobs[elems]
 
-    def indices(self, elems, split=False):
-        try:
-            nelems = len(elems)
-        except TypeError:
-            elems = elems,
-            nelems = 1
-        elems += (slice(None),) * (self.rank - nelems)
-        indices = tuple(self.index(elem) for elem in elems)
-        if split:
-            return indices[:self.xrank], indices[self.xrank:]
-        return indices
+    def dprobs(self, params, elems):
+        probs = self.probs(params, elems)
+        dlogprobs = self.dlogprobs(params, elems)
+        broadcast = (...,) + self.rank * (np.newaxis,)
+        return probs[broadcast] * dlogprobs
 
-    def logprobs(self, *elems):
-        return np.log(self.probs(*elems))
+    def sample(self, params, xelems):
+        if len(xelems) != self.xrank:
+            raise ValueError(f'{self.xrank} inputs should be given;  {len(xelems)} given instead!')
 
-    def probs(self, *elems):
-        idxs = self.indices(elems)
-        return self.params[idxs]
-
-    #
-
-    def dist(self, *xelems):
-        assert len(xelems) == self.xrank
-
-        probs = self.probs(*xelems)
-        for yi in range(self.ysize):
-            yidxs = np.unravel_index(yi, self.ydims)
-            yelems = tuple(f.elem(i) for f, i in zip(self.yspaces, yidxs))
-            yield yelems + (probs[yidxs],)
-
-    def pr(self, *elems):
-        assert len(elems) == self.rank
-
-        return self.probs(*elems)
-
-    def sample(self, *xelems):
-        assert len(xelems) == self.xrank
-
-        # TODO kinda like a JointFactory but without names;  just indices?
-
-        probs = self.probs(*xelems).ravel()
+        probs = self.probs(params, xelems).ravel()
         # yi = rnd.choice(self.ysize, p=probs)
         yi = rnd.multinomial(1, probs).argmax()
-        yidxs = np.unravel_index(yi, self.ydims)
-        yelems = tuple(f.elem(i) for f, i in zip(self.yspaces, yidxs))
+        ys = np.unravel_index(yi, self.ydims)
+        return ys
+        # return ys[0] if len(ys) == 1 else ys
+        # yidxs = np.unravel_index(yi, self.ydims)
+        # yelems = tuple(f.elem(i) for f, i in zip(self.yspaces, yidxs))
 
-        if len(yelems) == 1:
-            return yelems[0]
-        return yelems
+        # if len(yelems) == 1:
+        #     return yelems[0]
+        # return yelems
