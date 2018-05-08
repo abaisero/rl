@@ -37,7 +37,7 @@ class Reactive:
     def new_context(self, params):
         return types.SimpleNamespace(o=None)
 
-    def step(self, params, pcontext, feedback, *, inline=True):
+    def step(self, params, pcontext, feedback, *, inline=False):
         if not inline:
             pcontext = copy.copy(pcontext)
         pcontext.o = feedback.o

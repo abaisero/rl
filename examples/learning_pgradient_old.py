@@ -148,9 +148,9 @@ if __name__ == '__main__':
 
     # TODO objective..... how to? I guess it depends on each "objective"
     # objective = getattr(pomdp.objectives, obj)(env)
-    policy = policies.factory(env, args.policy)
-    objectives = [algos.factory(env, policy, obj) for obj in args.objectives]
+    objectives = [algos.factory(obj) for obj in args.objectives]
     nobjectives = len(objectives)
+    policy = policies.factory(env, args.policy)
 
     print(env)
     print(policy)
@@ -221,60 +221,44 @@ if __name__ == '__main__':
 
         # TODO I want to store the things independnetly
         shape = nobjectives, nparams
-        objs = np.empty(nobjectives)
-        grads = np.empty(shape, dtype=object)
+        dparams = np.empty(shape, dtype=object)
         gnorms2 = np.empty(shape, dtype=object)
-
-        objectives_episodic = [objective for objective in objectives
-                               if objective.type_ == 'episodic']
-        # objectives_analytic = [objective for objective in objectives
-        #                        if objective.type_ == 'analytic']
-
-        # TODO split into episodic and analytic
 
         stepsize.reset()
         for e in range(nepisodes):
-            # episodic objectives
-            econtext = env.new_context()
-            pcontext = policy.new_context(params)
-            acontexts = [objective.new_context()
-                         for objective in objectives_episodic]
-            while econtext.t < nsteps:
-                a = policy.sample_a(params, pcontext)
-                feedback, econtext1 = env.step(econtext, a)
-                pcontext1 = policy.step(params, pcontext, feedback)
+            # NOTE ovalues should be a brand new array, for the queue
+            ovalues = np.zeros(nobjectives)
+            dparams.fill(0.)
 
-                for objective, acontext in zip(objectives_episodic, acontexts):
-                    objective.step(params, acontext, econtext, pcontext, a,
-                                   feedback, pcontext1, inline=True)
+            for oi, (w, objective) in enumerate(zip(args.weights, objectives)):
+                # TODO parallelize this!!!!!! not the other one!
+                # TODO how to give nsteps?
+                # TODO here run main env loop!!!!
+                obj, dobj = objective(params, policy, env)
+                ovalues[oi] = w * obj
+                dparams[oi] = w * dobj
 
-                econtext = econtext1
-                pcontext = pcontext1
-
-            j = 0
-            for i, objective in enumerate(objectives):
-                if objective.type_ == 'episodic':
-                    objs[i] = acontexts[j].obj
-                    grads[i] = acontexts[j].grad
-                    j += 1
-                elif objective.type_ == 'analytic':
-                    objs[i], grads[i] = objective(params)
-                else:
-                    assert False
-
-            for idx, grad in np.ndenumerate(np.square(grads)):
-                gnorms2[idx] = grad.sum()
+            # for oi in, dp2 in enumerate(np.square(dparams)):
+            # dparams2 = np.square(dparams)
+            # for i in np.ndindex(dparams.shape):
+            #     gnorms2[i] = dparams2[i].sum()
+            for idx, dp in np.ndenumerate(np.square(dparams)):
+                gnorms2[idx] = dp.sum()
             gnorm2 = gnorms2.sum()
 
+            # TODO now I can do stuff with all this stuff!
             if clip is not None and gnorm2 > clip2:
-                grads *= clip / np.sqrt(gnorm2)
+                gnorm = np.sqrt(gnorm2)
+                dparams *= clip / gnorm
 
-            ovalues = args.weights * objs
-            params += stepsize() * np.dot(args.weights, grads)
+            params += stepsize() * dparams.sum(axis=0)
 
             stepsize.step()
 
-            returns_run[idx_returns] = objs[0]
+            returns_run[idx_returns] = ovalues[0]
+            # print(ovalues, gnorms2.ravel())
+            # print(ovalues)
+
             idx_returns += 1
 
             if ri == 0:

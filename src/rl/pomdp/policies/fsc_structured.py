@@ -94,7 +94,7 @@ class FSC_Structured:
     def new_context(self, params):
         return types.SimpleNamespace(n=self.n0)
 
-    def step(self, params, pcontext, feedback, *, inline=True):
+    def step(self, params, pcontext, feedback, *, inline=False):
         n1 = self.sample_n(params, pcontext, feedback)
 
         if not inline:

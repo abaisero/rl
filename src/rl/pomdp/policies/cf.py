@@ -28,7 +28,7 @@ class CF:
     def new_context(self, params):
         return types.SimpleNamespace()
 
-    def step(self, params, pcontext, feedback, *, inline=True):
+    def step(self, params, pcontext, feedback, *, inline=False):
         return pcontext
 
     def dlogprobs(self, params, pcontext, a, feedback, pcontext1):

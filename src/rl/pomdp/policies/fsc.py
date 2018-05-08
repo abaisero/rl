@@ -53,7 +53,7 @@ class FSC:
     def new_context(self, params):
         return types.SimpleNamespace(n=self.nspace.elem(0))
 
-    def step(self, params, pcontext, feedback, *, inline=True):
+    def step(self, params, pcontext, feedback, *, inline=False):
         n1 = self.sample_n1(params, pcontext, feedback)
 
         if not inline:

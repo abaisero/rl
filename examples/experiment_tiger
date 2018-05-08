@@ -1,41 +1,35 @@
 #!/usr/bin/zsh
 
-opts=(--runs 10 --episodes 10 --steps 10)
-# opts=(--runs 100 --episodes 5000 --steps 100)
-# opts=(--runs 20 --episodes 1000 --steps 100)
-pomdp=tiger
+# opts=(--runs 10 --episodes 1000 --steps 100 --clip 1 --pbar)
+# opts=(--runs 10 --episodes 100 --steps 100 --clip 1 --pbar)
+opts=(--runs 50 --episodes 5000 --steps 100 --clip 1 --pbar)
+# opts=(--runs 20 --episodes 1000 --steps 100 --clip 1)
 
-./learning_pomdp.py $opts --out ${pomdp}_cfgpomdp_cf.npy ${pomdp}.pomdp cfgpomdp cf
+N=10
+K=5
 
-for N in 5 10 20; do
-  ./learning_pomdp.py $opts --out ${pomdp}_isgpomdp_fsc_$N.npy $pomdp.pomdp isgpomdp fsc $N
+for l in 0 1 3 10; do
+  if (($l)); then
+    out=tiger__fsc_${N}__${l}_contextful2_.9_.05_.05.npy
+    ./learning_pgradient.py $opts --out $out tiger.pomdp "fsc $N" isgpomdp $l 'contextful2 .9 .05 .05'
+
+    out=tiger__fsc_${N}__${l}_contextful3_.9_.05_.05.npy
+    ./learning_pgradient.py $opts --out $out tiger.pomdp "fsc $N" isgpomdp $l 'contextful3 .9 .05 .05'
+  else
+    out=tiger__fsc_${N}.npy
+    ./learning_pgradient.py $opts --out $out tiger.pomdp "fsc $N" isgpomdp
+  fi
 done
 
-for N in 10 15 25; do
-for K in $((N-5)) $((N-10)) $((N-15)); do
-if [[ $K -gt 0 ]]; then
-  ./learning_pomdp.py $opts --out ${pomdp}_isgpomdp_fscsparse_${N}_${K}.npy $pomdp.pomdp isgpomdp fsc_sparse $N $K
-fi
-done
-done
+for l in 0 1 3 10; do
+  if (($l)); then
+    out=tiger__fscsparse_${N}_${K}__${l}_contextful2_.9_.05_.05.npy
+    ./learning_pgradient.py $opts --out $out tiger.pomdp "fsc_sparse $N $K" isgpomdp $l 'contextful2 .9 .05 .05'
 
-for S in `seq 4`; do
-  ./learning_pomdp.py $opts --out ${pomdp}_isgpomdp_fscstructured_$S.npy $pomdp.pomdp isgpomdp fsc_structured tiger.lin.$S.fss
-done
-
-for N in 5 10 20; do
-  ./learning_pomdp.py $opts --out ${pomdp}_expgpomdp_fsc_$N.npy $pomdp.pomdp expgpomdp fsc --belief $N
-done
-
-# TODO belief-sparse-FSC model does not have nmodel
-# for N in 10 15 25; do
-# for K in $((N-5)) $((N-10)) $((N-15)); do
-# if [[ $K -gt 0 ]]; then
-#   ./learning_pomdp.py $opts --out ${pomdp}_expgpomdp_fscsparse_${N}_${K}.npy $pomdp.pomdp expgpomdp fsc_sparse --belief $N $K
-# fi
-# done
-# done
-
-for S in `seq 4`; do
-  ./learning_pomdp.py $opts --out ${pomdp}_expgpomdp_fscstructured_$S.npy $pomdp.pomdp expgpomdp fsc_structured --belief tiger.lin.$S.fss
+    out=tiger__fscsparse_${N}_${K}__${l}_contextful3_.9_.05_.05.npy
+    ./learning_pgradient.py $opts --out $out tiger.pomdp "fsc_sparse $N $K" isgpomdp $l 'contextful3 .9 .05 .05'
+  else
+    out=tiger__fscsparse_${N}_${K}.npy
+    ./learning_pgradient.py $opts --out $out tiger.pomdp "fsc_sparse $N $K" isgpomdp
+  fi
 done

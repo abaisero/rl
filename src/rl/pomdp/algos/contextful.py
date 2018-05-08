@@ -1,105 +1,148 @@
+import types
+import copy
+
 import numpy as np
-# from scipy.stats import entropy
 
 
-def contextful(params, policy, env, l=None):
-    N = policy.nnodes
+class Contextful:
+    type_ = 'analytic'
 
-    # TODO this is specific for amodel = params[0].  Generalize!
-    probs = policy.amodel.probs(params[0], ())
-    dprobs = policy.amodel.dprobs(params[0], ())
-    logprobs = policy.amodel.logprobs(params[0], ())
-    dlogprobs = policy.amodel.dlogprobs(params[0], ())
+    def __init__(self, policy):
+        self.policy = policy
 
-    dlogprobs_sum = dlogprobs.sum(axis=1, keepdims=True)
-    logprobs_sum = logprobs.sum(axis=1, keepdims=True)
+    def __call__(self, params):
+        N = self.policy.nnodes
 
-    c = np.einsum('na,na->', probs, N * logprobs - logprobs_sum)
-    dc = np.zeros_like(params)
-    dc[0] = np.einsum('na...,na->...', dprobs, N * logprobs - logprobs_sum) \
-        + np.einsum('na,na...->...', probs, N * dlogprobs - dlogprobs_sum)
-    dc[1] = np.zeros(1)
+        # TODO this is specific for amodel = params[0].  Generalize!
+        probs = self.policy.amodel.probs(params[0], ())
+        dprobs = self.policy.amodel.dprobs(params[0], ())
+        logprobs = self.policy.amodel.logprobs(params[0], ())
+        dlogprobs = self.policy.amodel.dlogprobs(params[0], ())
 
-    c /= N * (N - 1)
-    dc /= N * (N - 1)
+        dlogprobs_sum = dlogprobs.sum(axis=1, keepdims=True)
+        logprobs_sum = logprobs.sum(axis=1, keepdims=True)
 
-    if l is not None:
-        softmax = np.logaddexp(l, c)
-        c += l - softmax
-        dc *= np.exp(l - softmax)
+        c = np.einsum('na,na->', probs, N * logprobs - logprobs_sum)
+        dc = np.zeros_like(params)
+        dc[0] = np.einsum('na...,na->...',
+                          dprobs, N * logprobs - logprobs_sum) \
+            + np.einsum('na,na...->...', probs, N * dlogprobs - dlogprobs_sum)
+        dc[1] = np.zeros(1)
 
-    return c, dc
+        c /= N * (N - 1)
+        dc /= N * (N - 1)
 
-
-# NOTE this is only for FSC
-# how to generalize?
-def contextful2(params, policy, env, cfprobs, l=None):
-    N = policy.nnodes
-
-    # TODO I need to know which params are relative to which part of stuff..
-
-    # TODO this is specific for amodel = params[0].  Generalize!
-    logcfprobs = np.nan_to_num(np.log(cfprobs))
-
-    probs = policy.amodel.probs(params[0], ())
-    dprobs = policy.amodel.dprobs(params[0], ())
-    logprobs = policy.amodel.logprobs(params[0], ())
-
-    # import ipdb
-    # ipdb.set_trace()
-    c = np.einsum('na,na->', probs, logprobs - logcfprobs)
-    dc = np.zeros_like(params)
-    dc[0] = np.einsum('na...,na->...', dprobs, logprobs - logcfprobs)
-    dc[1] = np.zeros(1)
-
-    c /= N
-    dc /= N
-
-    # TODO compute this better!
-    if l is not None:
-        softmax = np.logaddexp(l, c)
-        c += l - softmax
-        dc *= np.exp(l - softmax)
-
-    c = np.nan_to_num(c)
-    dc = np.nan_to_num(dc)
-
-    # print(c)
-    return c, dc
+        return c, dc
 
 
-def contextful3(params, policy, env, cfprobs, nsteps=100, beta=None, l=None):
-    if beta is None:
-        beta = env.gamma
+class Contextful2:
+    type_ = 'analytic'
 
-    logcfprobs = np.log(cfprobs)
+    def __init__(self, policy, cf_probs):
+        self.policy = policy
+        self.cf_logprobs = np.log(cf_probs)
 
-    KL = 0.
-    z, d = 0, 0
+    def __call__(self, params):
+        # TODO I need to know which params are relative to which part of stuff.
 
-    econtext = env.new_context()
-    pcontext = policy.new_context(params)
-    while econtext.t < nsteps:
-        a = policy.sample_a(params, pcontext)
-        feedback, econtext = env.step(econtext, a)
-        # NOTE econtext already takes step here
-        pcontext1 = policy.step(params, pcontext, feedback, inline=False)
+        # TODO this is specific for amodel = params[0].  Generalize!
 
-        logprobs = policy.logprobs(params, pcontext, a, feedback, pcontext1)
-        dlogprobs = policy.dlogprobs(params, pcontext, a, feedback, pcontext1)
+        probs = self.policy.amodel.probs(params[0], ())
+        dprobs = self.policy.amodel.dprobs(params[0], ())
+        logprobs = self.policy.amodel.logprobs(params[0], ())
 
-        KL += (logprobs[0] - logcfprobs[a] - KL) / econtext.t
+        logratio = logprobs - self.cf_logprobs
+        obj = np.einsum('na,na->', probs, logratio)
+        grad = np.zeros_like(params)
+        grad[0] = np.einsum('na...,na->...', dprobs, logratio)
+        grad[1] = np.zeros(1)
 
-        z += beta * z + dlogprobs
-        d += ((logprobs - logcfprobs[a]) * z - d) / econtext.t
-        pcontext = pcontext1
+        obj /= self.policy.nnodes
+        grad /= self.policy.nnodes
 
-    KL /= nsteps
-    d /= nsteps
+        obj = np.nan_to_num(obj)
+        grad = np.nan_to_num(grad)
 
-    if l is not None:
-        softmax = np.logaddexp(l, KL)
-        KL += l - softmax
-        d *= np.exp(l - softmax)
+        return obj, grad
 
-    return KL, d
+
+# def contextful3(params, policy, env, cfprobs, nsteps=100, beta=None):
+#     if beta is None:
+#         beta = env.gamma
+
+#     logcfprobs = np.log(cfprobs)
+
+#     KL = 0.
+#     z, d = 0, 0
+
+#     econtext = env.new_context()
+#     pcontext = policy.new_context(params)
+#     while econtext.t < nsteps:
+#         a = policy.sample_a(params, pcontext)
+#         feedback, econtext = env.step(econtext, a)
+#         # NOTE econtext already takes step here
+#         pcontext1 = policy.step(params, pcontext, feedback, inline=False)
+
+#         logprobs = policy.logprobs(params, pcontext, a, feedback, pcontext1)
+#         dlogprobs = policy.dlogprobs(params, pcontext, a, feedback,
+#                                      pcontext1)
+
+#         KL += (logprobs[0] - logcfprobs[a] - KL) / econtext.t
+
+#         z += beta * z + dlogprobs
+#         d += ((logprobs - logcfprobs[a]) * z - d) / econtext.t
+#         pcontext = pcontext1
+
+#     return KL, d
+
+
+class Contextful3:
+    type_ = 'episodic'
+
+    def __init__(self, policy, beta, cf_probs):
+        self.policy = policy
+        self.beta = beta
+        self.cf_logprobs = np.log(cf_probs)
+
+    def new_context(self):
+        return types.SimpleNamespace(
+            obj=0.,  # objective value
+            elig=0.,  # eligibility trace
+            grad=0.,  # gradient
+        )
+
+    def step(self, params, acontext, econtext, pcontext, a, feedback,
+             pcontext1, *, inline=False):
+        if not inline:
+            acontext = copy.copy(acontext)
+
+        logprobs = self.policy.logprobs(params, pcontext, a, feedback,
+                                        pcontext1)
+        dlogprobs = self.policy.dlogprobs(params, pcontext, a, feedback,
+                                          pcontext1)
+
+        logratio = logprobs - self.cf_logprobs[a]
+        acontext.obj += (logratio[0] - acontext.obj) / (econtext.t + 1)
+        acontext.elig = self.beta * acontext.elig + dlogprobs
+        acontext.grad += (logratio * acontext.elig - acontext.grad) / \
+                         (econtext.t + 1)
+
+        return acontext
+
+    def episode(self, params, policy, env, nsteps):
+        econtext = env.new_context()
+        pcontext = policy.new_context(params)
+        acontext = self.new_context()
+        while econtext.t < nsteps:
+            a = policy.sample_a(params, pcontext)
+            feedback, econtext1 = env.step(econtext, a)
+            pcontext1 = policy.step(params, pcontext, feedback)
+            pscore = policy.dlogprobs(params, pcontext, a, feedback, pcontext1)
+
+            self.step(params, acontext, econtext, feedback, pscore,
+                      inline=True)
+
+            econtext = econtext1
+            pcontext = pcontext1
+
+        return acontext
