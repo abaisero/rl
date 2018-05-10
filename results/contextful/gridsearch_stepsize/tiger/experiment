@@ -1,0 +1,22 @@
+#!/usr/bin/zsh
+
+opts=(--runs 50 --episodes 10000 --steps 100 --pbar)
+# opts=(--runs 9 --episodes 100 --steps 100 --pbar)
+# opts=(--runs 10 --episodes 10 --steps 10 --pbar)
+
+N=10
+K=5
+
+for ss in .001 .003 .01 .03 .1 .3 1; do
+  policy="fsc $N"
+  out=result__fsc_${N}__ss_$ss
+  echo POLICY $policy SS $ss
+  pgradient.py $opts --out $out --stepsize $ss tiger.pomdp $policy isgpomdp
+  echo
+
+  policy="fsc_sparse $N $K"
+  out=result__fscsparse_${N}_${K}__ss_$ss
+  echo POLICY $policy SS $ss
+  pgradient.py $opts --out $out --stepsize $ss tiger.pomdp $policy isgpomdp
+  echo
+done

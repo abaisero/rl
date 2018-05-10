@@ -17,12 +17,23 @@ setup(
     packages=['rl'],
     package_dir={'': 'src'},
 
-    package_data={'rl': ['data/pomdp/*.pomdp', 'data/fsc/*.fsc']},
+    package_data={'rl': [
+        'data/pomdp/*.pomdp',
+        'data/mdp/*.mpd',
+        'data/fss/*.fss',
+        'data/fsc/*.fsc',
+    ]},
     include_package_data=True,
 
-    scripts=['scripts/rl-pomdp', 'scripts/rl-fsc', 'scripts/rl-fss'],
+    scripts=[
+        'scripts/rl-pomdp',
+        'scripts/rl-fsc',
+        'scripts/rl-fss',
+        'scripts/pgradient.py',
+        'scripts/results.py',
+    ],
 
-    install_requires=['numpy', 'scipy'],  # GPy, pytk
+    install_requires=['numpy', 'scipy', 'pyqt5', 'pyqtgraph'],  # pytk
     license='MIT',
     test_suite='tests',
 )
