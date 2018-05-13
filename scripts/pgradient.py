@@ -303,7 +303,7 @@ if __name__ == '__main__':
     gnorms = jobs[:, 1, ...]
 
     if config.out:
-        np.savez(config.out, objs=objs, gnorms=gnorms)
+        np.savez(config.out, objs=objs, gnorms=gnorms, weights=config.weights)
 
         args = '\n'.join(sys.argv)
         with open(f'{config.out}.txt', 'w') as f:

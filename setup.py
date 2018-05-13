@@ -30,6 +30,7 @@ setup(
         'scripts/rl-fsc',
         'scripts/rl-fss',
         'scripts/pgradient.py',
+        'scripts/shapes.py',
         'scripts/results.py',
     ],
 
