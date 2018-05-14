@@ -1,6 +1,6 @@
 #!/usr/bin/zsh
 
-opts=(--runs 50 --episodes 10000 --steps 100 --pbar)
+opts=(--processes 5 --runs 50 --episodes 10000 --steps 100 --pbar)
 # opts=(--runs 9 --episodes 100 --steps 100 --pbar)
 # opts=(--runs 10 --episodes 10 --steps 10 --pbar)
 
