@@ -8,7 +8,7 @@ import sys
 import rl.pomdp as pomdp
 import rl.pomdp.policies as policies
 import rl.pomdp.algos as algos
-# import rl.optim as optim
+import rl.optim as optim
 import rl.graph as graph
 import pyqtgraph as pg
 
@@ -105,6 +105,7 @@ if __name__ == '__main__':
     parser.add_argument('--steps', metavar='S', type=int, default=100,
                         help='number of steps in episode')
 
+    parser.add_argument('--adam', help='Adam', action='store_true')
     parser.add_argument('--stepsize', metavar='SS', type=float, default=1.,
                         help='stepsize')
     parser.add_argument('--clip', metavar='C', type=float, default=None,
@@ -123,9 +124,13 @@ if __name__ == '__main__':
     nepisodes = config.episodes
     nsteps = config.steps
 
-    stepsize = config.stepsize
-    clip = config.clip
-    clip2 = clip ** 2 if clip is not None else None
+    if config.adam:
+        optimizer = optim.Adam()
+    else:
+        optimizer = optim.GDescent(config.stepsize, config.clip)
+    # stepsize = config.stepsize
+    # clip = config.clip
+    # clip2 = clip ** 2 if clip is not None else None
 
     env = pomdp.Environment.from_fname(config.env)
     policy = policies.factory(env, config.policy)
@@ -143,6 +148,7 @@ if __name__ == '__main__':
     plot_policy = None
     if config.graph:
 
+        # TODO represent the reference lines somewhere else...
         lines = []
         for color, value in config.lines:
             try:
@@ -236,17 +242,22 @@ if __name__ == '__main__':
                     assert False, ('objective.type_ not in '
                                    '[\'episodic\', \'analytic\'].')
 
+            # TODO definitely better way
             for idx, grad in np.ndenumerate(np.square(grads)):
                 gnorms2[idx] = grad.sum()
-            gnorm2 = gnorms2.sum()
+            # gnorm2 = gnorms2.sum()
             gnorms = np.sqrt(gnorms2.sum(axis=1))
 
-            if clip is not None and gnorm2 > clip2:
-                grads *= clip / np.sqrt(gnorm2)
+            # if clip is not None and gnorm2 > clip2:
+            #     grads *= clip / np.sqrt(gnorm2)
 
+            # TODO instantiate optimizer stuff!!
             losses = config.weights * objs
             dloss = np.dot(config.weights, grads)
-            params += stepsize * dloss
+
+            params += optimizer(dloss)
+            # params += stepsize * dloss
+            # TODO
 
             run_objs[:, idx_episode] = objs
             run_gnorms[:, idx_episode] = gnorms
