@@ -85,6 +85,14 @@ class FSC_Sparse:
         params[1] = self.models[1].new_params()
         return params
 
+    def process_params(self, params, *, inline=False):
+        if not inline:
+            params = params.copy()
+
+        self.models[0].process_params(params[0], inline=True)
+        self.models[1].process_params(params[1], inline=True)
+        return params
+
     def new_context(self, params):
         return types.SimpleNamespace(n=self.nspace.elem(0))
 

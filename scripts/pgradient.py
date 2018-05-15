@@ -248,16 +248,12 @@ if __name__ == '__main__':
             # gnorm2 = gnorms2.sum()
             gnorms = np.sqrt(gnorms2.sum(axis=1))
 
-            # if clip is not None and gnorm2 > clip2:
-            #     grads *= clip / np.sqrt(gnorm2)
-
             # TODO instantiate optimizer stuff!!
             losses = config.weights * objs
             dloss = np.dot(config.weights, grads)
 
             params += optimizer(dloss)
-            # params += stepsize * dloss
-            # TODO
+            policy.process_params(params, inline=True)
 
             run_objs[:, idx_episode] = objs
             run_gnorms[:, idx_episode] = gnorms

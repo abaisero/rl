@@ -40,13 +40,22 @@ class Softmax(Model):
             pass
         else:
             params[nmask] = -np.inf
+
+        return self.process_params(params)
+
+    def process_params(self, params, *, inline=False):
+        if not inline:
+            params = params.copy()
+        params -= logsumexp(params, axis=self.yaxes, keepdims=True)
         return params
 
     def prefs(self, params, elems):
         return params[elems]
 
     def logprobs(self, params, elems):
-        logprobs = params - logsumexp(params, axis=self.yaxes, keepdims=True)
+        # NOTE not necessary anymore, with process_params
+        # logprobs = params - logsumexp(params, axis=self.yaxes, keepdims=True)
+        logprobs = params
         return logprobs[elems]
 
     def probs(self, params, elems):
@@ -59,20 +68,30 @@ class Softmax(Model):
     def dprefs(self, params, elems):
         return self.phi(params, elems)
 
+    # NOTE naive implementation;  obsolete
+    # def dlogprobs(self, params, elems):
+    #     # TODO improve performance
+    #     dprefs = self.dprefs(params, ())
+    #     probs = self.probs(params, ())
+
+    #     reshapekey = (
+    #         (slice(None),) * self.xrank +
+    #         (np.newaxis,) * self.yrank +
+    #         (...,)
+    #     )
+
+    #     ss = f'{self.ss},{self.ss}...->{self.xss}...'
+    #     dlogprobs = dprefs - np.einsum(ss, probs, dprefs)[reshapekey]
+    #     return dlogprobs[elems]
+
     def dlogprobs(self, params, elems):
-        # TODO improve performance
-        dprefs = self.dprefs(params, ())
-        probs = self.probs(params, ())
+        xelems, yelems = elems[:self.xrank], elems[self.xrank:]
+        dprefs = self.dprefs(params, xelems)
+        probs = self.probs(params, xelems)
 
-        reshapekey = (
-            (slice(None),) * self.xrank +
-            (np.newaxis,) * self.yrank +
-            (...,)
-        )
-
-        ss = f'{self.ss},{self.ss}...->{self.xss}...'
-        dlogprobs = dprefs - np.einsum(ss, probs, dprefs)[reshapekey]
-        return dlogprobs[elems]
+        yaxes = tuple(range(probs.ndim - self.yrank, probs.ndim))
+        dlogprobs = dprefs - np.sum(probs * dprefs, axis=yaxes, keepdims=True)
+        return dlogprobs[yelems]
 
     def dprobs(self, params, elems):
         probs = self.probs(params, elems)
