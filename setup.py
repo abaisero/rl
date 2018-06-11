@@ -29,6 +29,7 @@ setup(
         'scripts/rl-pomdp',
         'scripts/rl-fsc',
         'scripts/rl-fss',
+        'scripts/evaluate.py',
         'scripts/pgradient.py',
         'scripts/shapes.py',
         'scripts/results.py',

@@ -18,7 +18,7 @@ class FSC_Structured:
 
     @staticmethod
     def from_fname(env, fname):
-        with data.open_resource(fname, 'fss') as f:
+        with data.resource_open(fname, 'fss') as f:
             dotfss = parse_fss(f.read())
 
         # TODO check that all actions are used
@@ -110,6 +110,13 @@ class FSC_Structured:
         pcontext.n = n1
 
         return pcontext
+
+    def logprobs(self, params, pcontext, a, feedback, pcontext1):
+        n, o, n1 = pcontext.n, feedback.o, pcontext1.n
+        logprobs = np.empty(2, dtype=object)
+        logprobs[0] = self.models[0].logprobs(params[0], (n, a))
+        logprobs[1] = self.models[1].logprobs(params[1], (n, o, n1))
+        return logprobs
 
     def dlogprobs(self, params, pcontext, a, feedback, pcontext1):
         n, o, n1 = pcontext.n, feedback.o, pcontext1.n

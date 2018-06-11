@@ -9,14 +9,6 @@ LOGGING = {
         },
     },
 
-    # NOTE silly to filter by name....
-    # 'filters': {
-    #     'agents': {
-    #         '()': 'logging.Filter',
-    #         'name': 'rl.mdp.agents',
-    #     },
-    # },
-
     'handlers': {
         'file': {
             'level': 'DEBUG',
@@ -24,7 +16,6 @@ LOGGING = {
             'filename': 'debug.log',
             'mode': 'w',
             'formatter': 'simple',
-            # 'filters': ['agents'],
         },
     },
 
@@ -34,10 +25,5 @@ LOGGING = {
             'level': 'DEBUG',
             'propagate': True,
         },
-        # 'rl.pomdp.agents.pgradient': {
-        #     'handlers': ['file'],
-        #     'level': 'INFO',
-        #     'propagate': True,
-        # },
     },
 }

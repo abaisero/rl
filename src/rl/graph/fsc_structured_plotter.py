@@ -29,13 +29,13 @@ def process_target(q, nepisodes, alabels, nlabels, olabels, amask, nmask):
     adata = np.full(ashape, np.nan)
     nshape = nepisodes, nn, no, nn
     ndata = np.full(nshape, np.nan)
+    amask = amask.T
+    nmask = nmask.T
 
     app = QtGui.QApplication([])
     gui = FSCWindow().setup()
     gui.setWindowTitle('FSC')
 
-    print('amask.shape', amask.shape)
-    print('nmask.shape', nmask.shape)
     gui.addTab(
         DistWidget().setup(adata, alabels, nlabels, amask),
         'A-Strategy',

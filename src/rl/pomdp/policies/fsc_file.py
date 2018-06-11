@@ -17,7 +17,7 @@ class FSC_File:
 
     @staticmethod
     def from_fname(env, fname):
-        with data.open_resource(fname, 'fsc') as f:
+        with data.resource_open(fname, 'fsc') as f:
             dotfsc = parse_fsc(f.read())
 
         # TODO stadt..

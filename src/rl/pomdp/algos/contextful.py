@@ -44,12 +44,14 @@ class Contextful2:
 
     def __call__(self, params):
         # TODO I need to know which params are relative to which part of stuff.
-
         # TODO this is specific for amodel = params[0].  Generalize!
 
         probs = self.policy.amodel.probs(params[0], ())
         dprobs = self.policy.amodel.dprobs(params[0], ())
         logprobs = self.policy.amodel.logprobs(params[0], ())
+
+        # NOTE in case some probabilities are 0 (e.g. structured policy)
+        logprobs = np.nan_to_num(logprobs)
 
         logratio = logprobs - self.cf_logprobs
         obj = np.einsum('na,na->', probs, logratio)
@@ -59,9 +61,6 @@ class Contextful2:
 
         obj /= self.policy.nnodes
         grad /= self.policy.nnodes
-
-        obj = np.nan_to_num(obj)
-        grad = np.nan_to_num(grad)
 
         return obj, grad
 
@@ -99,9 +98,8 @@ class Contextful2:
 class Contextful3:
     type_ = 'episodic'
 
-    def __init__(self, policy, beta, cf_probs):
+    def __init__(self, policy, cf_probs):
         self.policy = policy
-        self.beta = beta
         self.cf_logprobs = np.log(cf_probs)
 
     def new_context(self):
@@ -121,9 +119,9 @@ class Contextful3:
         dlogprobs = self.policy.dlogprobs(params, pcontext, a, feedback,
                                           pcontext1)
 
-        logratio = logprobs - self.cf_logprobs[a]
-        acontext.obj += (logratio[0] - acontext.obj) / (econtext.t + 1)
-        acontext.elig = self.beta * acontext.elig + dlogprobs
+        logratio = logprobs[0] - self.cf_logprobs[a]
+        acontext.obj += (logratio - acontext.obj) / (econtext.t + 1)
+        acontext.elig += dlogprobs
         acontext.grad += (logratio * acontext.elig - acontext.grad) / \
                          (econtext.t + 1)
 

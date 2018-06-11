@@ -12,6 +12,7 @@ sns.set_style('dark')
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
+    parser.add_argument('--out', type=str, default=None, help='output file')
     parser.add_argument('--horizon', type=int, help='graph horizon')
     parser.add_argument('--mm', action='store_true', help='show min and max')
     parser.add_argument('--line', metavar=('C', 'F'), nargs=2, action='append',
@@ -75,4 +76,8 @@ if __name__ == '__main__':
                 ax.axhline(datap[4], color=color, linewidth=1, linestyle=':')
 
     plt.legend(frameon=True)
+
+    if config.out:
+        plt.savefig(config.out, bbox_inches='tight')
+
     plt.show()

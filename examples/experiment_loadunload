@@ -2,12 +2,12 @@
 
 # opts=(--runs 10 --episodes 10 --steps 10)
 # opts=(--runs 10 --episodes 1000 --steps 100 --clip 1 --pbar)
-opts=(--runs 10 --episodes 5000 --steps 100 --clip 1 --pbar)
+opts=(--runs 20 --episodes 5000 --steps 100 --clip 1 --pbar)
 
 N=10
 K=5
 
-for l in 0 1 3 10; do
+for l in .1 .3 .5; do
   if (($l)); then
     out=loadunload__fsc_${N}__${l}_contextful2_.5_.5.npy
     ./learning_pgradient.py $opts --out $out loadunload.pomdp "fsc $N" isgpomdp $l "contextful2 .5 .5"
@@ -20,7 +20,7 @@ for l in 0 1 3 10; do
   fi
 done
 
-for l in 0 1 3 10; do
+for l in .1 .3 .5; do
   if (($l)); then
     out=loadunload__fscsparse_${N}_${K}__${l}_contextful2_.5_.5.npy
     ./learning_pgradient.py $opts --out $out loadunload.pomdp "fsc_sparse $N $K" isgpomdp $l "contextful2 .5 .5"

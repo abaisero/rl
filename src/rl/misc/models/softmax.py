@@ -4,7 +4,7 @@ import numpy as np
 import numpy.random as rnd
 from scipy.special import logsumexp
 
-import string
+# import string
 
 
 class Softmax(Model):
@@ -26,14 +26,15 @@ class Softmax(Model):
         self.xaxes = tuple(range(self.xrank))
         self.yaxes = tuple(range(self.xrank, self.rank))
 
-        self.xss = string.ascii_lowercase[:self.xrank]
-        self.yss = string.ascii_lowercase[self.xrank:self.rank]
-        self.ss = self.xss + self.yss
+        # self.xss = string.ascii_lowercase[:self.xrank]
+        # self.yss = string.ascii_lowercase[self.xrank:self.rank]
+        # self.ss = self.xss + self.yss
 
         self.__phi = np.eye(self.size).reshape(2 * self.dims)
 
     def new_params(self):
-        params = np.zeros(self.dims)
+        params = .5 * rnd.randn(*self.dims)
+        # params = np.zeros(self.dims)
         try:
             nmask = ~self.mask
         except TypeError:
@@ -65,13 +66,13 @@ class Softmax(Model):
     def phi(self, params, elems):
         return self.__phi[elems]
 
-    def dprefs(self, params, elems):
+    def _dprefs(self, params, elems):
         return self.phi(params, elems)
 
     # NOTE naive implementation;  obsolete
     # def dlogprobs(self, params, elems):
     #     # TODO improve performance
-    #     dprefs = self.dprefs(params, ())
+    #     dprefs = self._dprefs(params, ())
     #     probs = self.probs(params, ())
 
     #     reshapekey = (
@@ -86,7 +87,7 @@ class Softmax(Model):
 
     def dlogprobs(self, params, elems):
         xelems, yelems = elems[:self.xrank], elems[self.xrank:]
-        dprefs = self.dprefs(params, xelems)
+        dprefs = self._dprefs(params, xelems)
         probs = self.probs(params, xelems)
 
         yaxes = tuple(range(probs.ndim - self.yrank, probs.ndim))
@@ -101,9 +102,8 @@ class Softmax(Model):
 
     def sample(self, params, xelems):
         if len(xelems) != self.xrank:
-            raise ValueError(
-                f'{self.xrank} inputs should be given;  {len(xelems)} '
-                'given instead!')
+            raise ValueError(f'{self.xrank} inputs should be given;  '
+                             f'{len(xelems)} given instead!')
 
         probs = self.probs(params, xelems).ravel()
         yi = rnd.multinomial(1, probs).argmax()

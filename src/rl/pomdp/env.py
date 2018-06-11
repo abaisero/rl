@@ -1,3 +1,5 @@
+import logging
+
 from collections import namedtuple
 from types import SimpleNamespace
 import copy
@@ -15,6 +17,8 @@ Model = namedtuple('Model', 's0model, s1model, omodel, rewards')
 
 
 class Environment:
+    logger = logging.getLogger('rl.pomdp.Environment')
+
     def __init__(self, name, sspace, aspace, ospace, model=None, gamma=None):
         self.name = name
         self.sspace = sspace
@@ -51,22 +55,26 @@ class Environment:
         s0, = self.model.s0model.sample()
         econtext = SimpleNamespace(t=0, s=s0, gtype=gtype)
 
-        if gtype == 'longterm':
+        if gtype == 'episodic':
             econtext.g = 0.
         elif gtype == 'discounted':
             econtext.g = 0.
             econtext.discount = 1.
+        elif gtype == 'longterm':
+            econtext.g = 0.
 
         return econtext
 
-    def step(self, econtext, a, *, inline=True):
+    def step(self, econtext, a, *, inline=False):
         t = econtext.t
         s = econtext.s
 
         t1 = t + 1
         s1, = self.model.s1model.sample(s, a)
         o, = self.model.omodel.sample(s, a, s1)
-        r = self.model.rewards[s, a, s1]
+        r = float(self.model.rewards[s, a, s1])
+
+        self.logger.debug(f'step():  {t} {s} {a} -> {s1} {o} {r}')
 
         feedback = SimpleNamespace(r=r, o=o)
         if not inline:
@@ -74,11 +82,13 @@ class Environment:
         econtext.t = t1
         econtext.s = s1
 
-        if econtext.gtype == 'longterm':
-            econtext.g += (r - econtext.g) / t1
+        if econtext.gtype == 'episodic':
+            econtext.g += r
         elif econtext.gtype == 'discounted':
             econtext.g += r * econtext.discount
             econtext.discount *= self.gamma
+        elif econtext.gtype == 'longterm':
+            econtext.g += (r - econtext.g) / t1
 
         return feedback, econtext
 
@@ -87,13 +97,13 @@ class Environment:
         pcontext = policy.new_context()
         while econtext.t < nsteps:
             a = policy.sample_a(pcontext)
-            feedback, _ = self.step(econtext, a)
-            policy.step(pcontext, feedback)
+            feedback, _ = self.step(econtext, a, inline=True)
+            policy.step(pcontext, feedback, inline=True)
         return econtext.g
 
     @staticmethod
     def from_fname(fname):
-        with data.open_resource(fname, 'pomdp') as f:
+        with data.resource_open(fname, 'pomdp') as f:
             dotpomdp = parse_pomdp(f.read())
 
         if dotpomdp.values == 'cost':

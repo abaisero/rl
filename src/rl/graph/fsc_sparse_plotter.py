@@ -29,6 +29,7 @@ def process_target(q, nepisodes, alabels, nlabels, olabels, nmask):
     adata = np.full(ashape, np.nan)
     nshape = nepisodes, nn, no, nn
     ndata = np.full(nshape, np.nan)
+    nmask = nmask.T
     # nmask = np.stack([nmask] * no, axis=1)
 
     app = QtGui.QApplication([])

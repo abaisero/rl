@@ -21,5 +21,8 @@ if __name__ == '__main__':
 
         bname = os.path.basename(fname)
         print(f'Array `{bname}` loaded:')
-        for name, a in rfile.iteritems():
-            print(f' - {name}: {a.shape}')
+        try:
+            for name, a in rfile.iteritems():
+                print(f' - {name}: {a.shape}')
+        except AttributeError:
+            print(f' - shape: {rfile.shape}`')

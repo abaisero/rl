@@ -1,10 +1,11 @@
 #!/usr/bin/env python
 
 import sys
+import logging
+import logging.config
+import argparse
 
-# import logging.config
-# from logconfig import LOGGING
-
+import rl.data as data
 import rl.pomdp as pomdp
 import rl.pomdp.policies as policies
 import rl.pomdp.algos as algos
@@ -17,10 +18,8 @@ import numpy as np
 import multiprocessing as mp
 from tqdm import tqdm
 
-import argparse
 
-
-# # TODO get rid of this monstruorisy?
+# # TODO get rid of this monstruorisy?  Probably create set of optimizers stuff
 # class StepSizeAction(argparse.Action):
 #     def __call__(self, parser, args, values, option_string=None):
 #         nmin, nmax = 1, 2
@@ -39,6 +38,7 @@ import argparse
 #         setattr(args, self.dest, stepsize)
 
 
+# TODO move elsewhere?
 class ObjectiveAction(argparse.Action):
     def __call__(self, parser, args, values, option_string=None):
         weights, objectives = [], []
@@ -82,21 +82,22 @@ def target_pbar(nruns, nepisodes, nprocesses, q):
 
 
 if __name__ == '__main__':
-    # logging configuration
-    # logging.config.dictConfig(LOGGING)
-
     parser = argparse.ArgumentParser(description='Policy Gradient')
 
     parser.add_argument('--pbar', action='store_true', help='progress bars')
-    parser.add_argument('--graph', action='store_true', help='graphics')
-    parser.add_argument('--line', metavar=('C', 'F'), nargs=2, action='append',
-                        dest='lines', default=[], help='graph reference lines')
+    parser.add_argument('--graph_objectives', action='store_true',
+                        help='graphics')
+    parser.add_argument('--graph_policy', action='store_true', help='graphics')
+    parser.add_argument('--gref', metavar=('C', 'F'), nargs=2, action='append',
+                        dest='grefs', default=[], help='graph reference lines')
 
     parser.add_argument('--out', metavar='F', type=str, default=None,
                         help='output file name')
 
     parser.add_argument('--processes', metavar='P', type=int,
                         default=mp.cpu_count() - 1, help='number of processes')
+    parser.add_argument('--samples', metavar='S', type=int,
+                        default=1, help='number of MC samples')
 
     parser.add_argument('--runs', metavar='R', type=int, default=10,
                         help='number of learning runs')
@@ -119,7 +120,48 @@ if __name__ == '__main__':
     config = parser.parse_args()
     print(f'Argument Namespace: {config}')
 
+    try:
+        level = getattr(logging, config.log.upper())
+    except AttributeError:
+        level = None
+
+    logging.config.dictConfig({
+        'version': 1,
+        'disable_existing_loggers': False,
+
+        'formatters': {
+            'simple': {
+                'format': '{levelname} {name} {message}',
+                'style': '{',
+            },
+        },
+
+        'handlers': {
+            'file': {
+                'level': level,
+                'class': 'logging.FileHandler',
+                'filename': 'pgradient.log',
+                'mode': 'w',
+                'formatter': 'simple',
+            },
+        },
+
+        'loggers': {
+            'rl': {
+                'handlers': ['file'],
+                'level': 'DEBUG',
+                'propagate': True,
+            },
+        },
+    })
+
+    logger = logging.getLogger('rl')
+    logger.info(f'Running evaluate.py')
+    logger.info(f' - args:  {sys.argv[1:]}')
+    logger.info(f' - config:  {config}')
+
     nprocesses = config.processes
+    nsamples = config.samples
     nruns = config.runs
     nepisodes = config.episodes
     nsteps = config.steps
@@ -128,9 +170,6 @@ if __name__ == '__main__':
         optimizer = optim.Adam()
     else:
         optimizer = optim.GDescent(config.stepsize, config.clip)
-    # stepsize = config.stepsize
-    # clip = config.clip
-    # clip2 = clip ** 2 if clip is not None else None
 
     env = pomdp.Environment.from_fname(config.env)
     policy = policies.factory(env, config.policy)
@@ -145,31 +184,26 @@ if __name__ == '__main__':
     print()
 
     plot_objectives = None
+    plot_gnorms = None
     plot_policy = None
-    if config.graph:
+    if config.graph_objectives:
 
         # TODO represent the reference lines somewhere else...
         lines = []
-        for color, value in config.lines:
-            try:
-                data = np.load(value)
-            except FileNotFoundError:
-                lines += [
-                    dict(pos=float(value), angle=0, pen=dict(color=color))
-                ]
-            else:
-                datap = np.percentile(data, [0, 25, 50, 75, 100])
-                lines += [
-                    dict(pos=datap[0], angle=0,
-                         pen=dict(color=color, style=pg.QtCore.Qt.DotLine)),
-                    dict(pos=datap[1], angle=0,
-                         pen=dict(color=color, style=pg.QtCore.Qt.DotLine)),
-                    dict(pos=datap[2], angle=0, pen=dict(color=color)),
-                    dict(pos=datap[3], angle=0,
-                         pen=dict(color=color, style=pg.QtCore.Qt.DotLine)),
-                    dict(pos=datap[4], angle=0,
-                         pen=dict(color=color, style=pg.QtCore.Qt.DotLine)),
-                ]
+        for color, refname in config.grefs:
+            data_gref = np.load(data.resource_path(refname, 'grefs'))
+            pdata_gref = np.percentile(data_gref, [0, 25, 50, 75, 100])
+            lines += [
+                dict(pos=pdata_gref[0], angle=0,
+                     pen=dict(color=color, style=pg.QtCore.Qt.DotLine)),
+                dict(pos=pdata_gref[1], angle=0,
+                     pen=dict(color=color, style=pg.QtCore.Qt.DotLine)),
+                dict(pos=pdata_gref[2], angle=0, pen=dict(color=color)),
+                dict(pos=pdata_gref[3], angle=0,
+                     pen=dict(color=color, style=pg.QtCore.Qt.DotLine)),
+                dict(pos=pdata_gref[4], angle=0,
+                     pen=dict(color=color, style=pg.QtCore.Qt.DotLine)),
+            ]
 
         plot_objectives = graph.Plotter(
             (nobjectives, nepisodes),
@@ -178,6 +212,13 @@ if __name__ == '__main__':
             lines=lines
         )
 
+        plot_gnorms = graph.Plotter(
+            (nobjectives, nepisodes),
+            window=dict(text='Grad Norms', size='16pt', bold=True),
+            labels=dict(left='GNorm', bottom='Episode'),
+        )
+
+    if config.graph_policy:
         plot_policy = policy.new_plot(nepisodes)
 
     #
@@ -211,36 +252,44 @@ if __name__ == '__main__':
         gnorms2 = np.empty((nobjectives, nparams))
 
         for idx_episode in range(nepisodes):
-            econtext = env.new_context()
-            pcontext = policy.new_context(params)
-            acontexts = [objective.new_context()
-                         if objective.type_ == 'episodic'
-                         else None
-                         for objective in objectives]
-            while econtext.t < nsteps:
-                a = policy.sample_a(params, pcontext)
-                feedback, econtext1 = env.step(econtext, a)
-                pcontext1 = policy.step(params, pcontext, feedback)
+            objs.fill(0)
+            grads.fill(0)
 
-                for objective, acontext in zip(objectives, acontexts):
-                    if acontext is not None:
-                        objective.step(params, acontext, econtext, pcontext,
-                                       a, feedback, pcontext1, inline=True)
+            for _ in range(nsamples):
+                econtext = env.new_context()
+                pcontext = policy.new_context(params)
+                acontexts = [objective.new_context()
+                             if objective.type_ == 'episodic'
+                             else None
+                             for objective in objectives]
+                while econtext.t < nsteps:
+                    a = policy.sample_a(params, pcontext)
+                    feedback, econtext1 = env.step(econtext, a)
+                    pcontext1 = policy.step(params, pcontext, feedback)
 
-                econtext = econtext1
-                pcontext = pcontext1
+                    for objective, acontext in zip(objectives, acontexts):
+                        if acontext is not None:
+                            objective.step(params, acontext, econtext,
+                                           pcontext, a, feedback, pcontext1,
+                                           inline=True)
 
-            j = 0
-            for i, objective in enumerate(objectives):
-                if objective.type_ == 'episodic':
-                    objs[i] = acontexts[j].obj
-                    grads[i] = acontexts[j].grad
-                    j += 1
-                elif objective.type_ == 'analytic':
-                    objs[i], grads[i] = objective(params)
-                else:
-                    assert False, ('objective.type_ not in '
-                                   '[\'episodic\', \'analytic\'].')
+                    econtext = econtext1
+                    pcontext = pcontext1
+
+                for i, (objective, acontext) \
+                        in enumerate(zip(objectives, acontexts)):
+                    if objective.type_ == 'episodic':
+                        obj, grad = acontext.obj, acontext.grad
+                    elif objective.type_ == 'analytic':
+                        obj, grad = objective(params)
+                    else:
+                        assert False, ('objective.type_ not in '
+                                       '[\'episodic\', \'analytic\'].')
+                    objs[i] += obj
+                    grads[i] += grad
+
+            objs /= nsamples
+            grads /= nsamples
 
             # TODO definitely better way
             for idx, grad in np.ndenumerate(np.square(grads)):
@@ -248,23 +297,21 @@ if __name__ == '__main__':
             # gnorm2 = gnorms2.sum()
             gnorms = np.sqrt(gnorms2.sum(axis=1))
 
-            # TODO instantiate optimizer stuff!!
-            losses = config.weights * objs
-            dloss = np.dot(config.weights, grads)
+            objs_weighted = config.weights * objs
+            gnorms_weighted = config.weights * gnorms
+            grad_weighted = np.dot(config.weights, grads)
 
-            params += optimizer(dloss)
+            params += optimizer(grad_weighted)
             policy.process_params(params, inline=True)
 
             run_objs[:, idx_episode] = objs
             run_gnorms[:, idx_episode] = gnorms
 
             if idx_job == 0:
-                # TODO graph gnorms
-
-                # if plot_objectives is not None:
-                #     plot_objectives.update(losses[0])
                 if plot_objectives is not None:
-                    plot_objectives.update(losses)
+                    plot_objectives.update(objs_weighted)
+                if plot_gnorms is not None:
+                    plot_gnorms.update(gnorms_weighted)
                 if plot_policy is not None:
                     plot_policy.update(params)
 
@@ -310,8 +357,10 @@ if __name__ == '__main__':
     gnorms = jobs[:, 1, ...]
 
     if config.out:
+        # save results
         np.savez(config.out, objs=objs, gnorms=gnorms, weights=config.weights)
 
+        # save cmdline
         args = '\n'.join(sys.argv)
         with open(f'{config.out}.txt', 'w') as f:
             print('# sys.argv', file=f)

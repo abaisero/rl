@@ -8,12 +8,12 @@ class GDescent:
         self.clip2 = clip ** 2 if clip is not None else None
 
     def __call__(self, grads):
-        grads_ = grads.copy()
-
         if self.clip is not None:
             gnorm2 = sum(g_.sum() for g_ in np.square(grads).flat)
 
             if self.clip2 < gnorm2:
-                grads_ *= self.clip / np.sqrt(gnorm2)
+                # NOTE avoiding overwrite
+                c = self.clip / np.sqrt(gnorm2)
+                grads = grads * c
 
-        return self.stepsize * grads_
+        return self.stepsize * grads
