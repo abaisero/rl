@@ -25,10 +25,10 @@ class FSC_Sparse:
         self.nspace = nspace
         self.K = K
 
-        _combs = list(itt.combinations(range(env.nobs), 2))
-        _test_mask = np.zeros((env.nobs, len(_combs)))
-        for i, comb in enumerate(_combs):
-            _test_mask[comb, i] = 1, -1
+        combs = list(itt.combinations(range(env.nobs), 2))
+        test_mask = np.zeros((env.nobs, len(combs)))
+        for i, comb in enumerate(combs):
+            test_mask[comb, i] = 1, -1
 
         for nfails in itt.count():
             if nfails == 100:
@@ -45,7 +45,7 @@ class FSC_Sparse:
                 continue
 
             # check that each observation gives a different transition mask
-            test = np.einsum('hyg,yn->hng', nmask, _test_mask)
+            test = np.einsum('hyg,yn->hng', nmask, test_mask)
             if np.all(test == 0, axis=0).any():
                 continue
 

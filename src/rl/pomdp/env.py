@@ -1,16 +1,16 @@
 import logging
 
 from collections import namedtuple
-from types import SimpleNamespace
-import copy
 
 import indextools
 from rl_parsers.pomdp import parse as parse_pomdp
 
-import rl.core as core
 import rl.data as data
 
 import numpy as np
+
+import torch
+from torch.distributions import Categorical
 
 
 Model = namedtuple('Model', 's0model, s1model, omodel, rewards')
@@ -51,55 +51,16 @@ class Environment:
     def nobs(self):
         return self.ospace.nelems
 
-    def new_context(self, gtype=None):
-        s0, = self.model.s0model.sample()
-        econtext = SimpleNamespace(t=0, s=s0, gtype=gtype)
+    def new(self):
+        return self.model.s0model.sample()
 
-        if gtype == 'episodic':
-            econtext.g = 0.
-        elif gtype == 'discounted':
-            econtext.g = 0.
-            econtext.discount = 1.
-        elif gtype == 'longterm':
-            econtext.g = 0.
-
-        return econtext
-
-    def step(self, econtext, a, *, inline=False):
-        t = econtext.t
-        s = econtext.s
-
-        t1 = t + 1
-        s1, = self.model.s1model.sample(s, a)
-        o, = self.model.omodel.sample(s, a, s1)
+    def step(self, s, a):
+        s1 = self.model.s1model.sample()[s, a]
+        o = self.model.omodel.sample()[s, a, s1]
         r = float(self.model.rewards[s, a, s1])
 
-        self.logger.debug(f'step():  {t} {s} {a} -> {s1} {o} {r}')
-
-        feedback = SimpleNamespace(r=r, o=o)
-        if not inline:
-            econtext = copy.copy(econtext)
-        econtext.t = t1
-        econtext.s = s1
-
-        if econtext.gtype == 'episodic':
-            econtext.g += r
-        elif econtext.gtype == 'discounted':
-            econtext.g += r * econtext.discount
-            econtext.discount *= self.gamma
-        elif econtext.gtype == 'longterm':
-            econtext.g += (r - econtext.g) / t1
-
-        return feedback, econtext
-
-    def episode(self, policy, nsteps, gtype=None):
-        econtext = self.new_context(gtype)
-        pcontext = policy.new_context()
-        while econtext.t < nsteps:
-            a = policy.sample_a(pcontext)
-            feedback, _ = self.step(econtext, a, inline=True)
-            policy.step(pcontext, feedback, inline=True)
-        return econtext.g
+        self.logger.debug(f'step():  {s} {a} -> {s1} {o} {r}')
+        return r, o, s1
 
     @staticmethod
     def from_fname(fname):
@@ -129,10 +90,10 @@ class Environment:
         O = np.stack([dotpomdp.O] * sspace.nelems)
         R = np.einsum('jik', dotpomdp.R.mean(axis=-1))
 
-        s0model = core.SpaceDistribution([], [sspace], start)
-        s1model = core.SpaceDistribution([sspace, aspace], [sspace], T)
-        omodel = core.SpaceDistribution([sspace, aspace, sspace], [ospace], O)
-        rewards = R
+        s0model = Categorical(probs=torch.tensor(start))
+        s1model = Categorical(probs=torch.tensor(T))
+        omodel = Categorical(probs=torch.tensor(O))
+        rewards = torch.tensor(R)
 
         env.model = Model(s0model, s1model, omodel, rewards)
         return env
