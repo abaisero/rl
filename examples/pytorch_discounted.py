@@ -40,12 +40,6 @@ parser.add_argument('--log-interval', type=int, default=10, metavar='N',
 
 config = parser.parse_args()
 
-nnodes, env = 2, pomdp.Environment.from_fname('loadunload.pomdp')
-# nnodes, env = 10, pomdp.Environment.from_fname('tiger.pomdp')
-# nnodes, env = 20, pomdp.Environment.from_fname('heavenhell.pomdp')
-# nnodes, env = 20, pomdp.Environment.from_fname('tag_avoid.pomdp')
-
-
 def make_r2g(n, gamma):
     r2g = gamma ** (-np.subtract.outer(range(n), range(n)))
     tril_idx = np.tril_indices(n, -1)
@@ -615,6 +609,11 @@ def algo(env, policy, algo):
 
 if __name__ == '__main__':
     print(config)
+
+    nnodes, env = 2, pomdp.Environment.from_fname('loadunload.pomdp')
+    # nnodes, env = 10, pomdp.Environment.from_fname('tiger.pomdp')
+    # nnodes, env = 20, pomdp.Environment.from_fname('heavenhell.pomdp')
+    # nnodes, env = 20, pomdp.Environment.from_fname('tag_avoid.pomdp')
 
     if config.seed is not None:
         torch.manual_seed(config.seed)
