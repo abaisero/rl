@@ -322,7 +322,7 @@ def actorcritic(env, policy, optimizer, episodes, samples, steps, device):
                   f'Reward: {rewards.mean():.2f} / {rewards.std():.2f};\t'
                   f'Return: {returns0.mean():.2f} / {returns0.std():.2f}')
 
-    return rews, returns
+    return rews, rets
 
 
 def acl(env, policy, optimizer, episodes, samples, steps, device, *, l):
@@ -399,7 +399,7 @@ def acl(env, policy, optimizer, episodes, samples, steps, device, *, l):
                   f'Reward: {rewards.mean():.2f} / {rewards.std():.2f};\t'
                   f'Return: {returns0.mean():.2f} / {returns0.std():.2f}')
 
-    return rews, returns
+    return rews, rets
 
 
 def make_policy(config):
@@ -486,14 +486,12 @@ if __name__ == '__main__':
         rewards.append(rews)
         returns.append(rets)
 
-    # rewards = torch.stack(rewards).cpu()
-    # returns = torch.stack(returns).cpu()
-
-    returns0 = returns[:, 0, :]
+    rewards = torch.stack(rewards).cpu()
+    returns = torch.stack(returns).cpu()
 
     if config.out is not None:
         fname = f'{config.out}.pt'
-        torch.save(returns0, fname)
+        torch.save(returns, fname)
 
         fname = f'{config.out}.txt'
         args='\n'.join(sys.argv)
