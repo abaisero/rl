@@ -33,6 +33,8 @@ setup(
         'scripts/pgradient.py',
         'scripts/shapes.py',
         'scripts/results.py',
+        'scripts/discounted.py',
+        'scripts/discounted_memreplay.py',
     ],
 
     install_requires=['numpy', 'scipy', 'pyqt5', 'pyqtgraph'],  # pytk

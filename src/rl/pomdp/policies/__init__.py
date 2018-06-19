@@ -1,5 +1,7 @@
 import argparse
 
+# TODO remove all these;  perhaps don't even have a single hub of stuff...
+# There is FSC and then all the rest must be built individually?
 from .cf import CF
 from .reactive import Reactive
 from .fsc import FSC
@@ -65,3 +67,8 @@ def factory(env, argstr):
     #     return Qlearning.from_namespace(env, args)
 
     raise ValueError(f'Policy `{args.policy}` not recognized')
+
+
+from .astrat import AStrategy
+from .ostrat import OStrategy, OStrategy_Sparse, OStrategy_Reactive
+from .nvalue import Value

@@ -1,0 +1,22 @@
+#!/usr/bin/zsh
+
+opts=(--processes 3 --runs 50 --episodes 10000 --steps 100 --pbar)
+# opts=(--processes 3 --runs 9 --episodes 100 --steps 100 --pbar)
+# opts=(--processes 3 --runs 10 --episodes 10 --steps 10 --pbar)
+
+N=10
+K=5
+
+for clip in .01 .03 .1 .3 1 3; do
+  policy="fsc $N"
+  out=result__fsc_${N}__clip_$clip
+  echo POLICY $policy CLIP $clip
+  pgradient.py $opts --out $out --clip $clip tiger.pomdp "$policy" isgpomdp
+  echo
+
+  policy="fsc_sparse $N $K"
+  out=result__fscsparse_${N}_${K}__clip_$clip
+  echo POLICY $policy CLIP $clip
+  pgradient.py $opts --out $out --clip $clip tiger.pomdp "$policy" isgpomdp
+  echo
+done

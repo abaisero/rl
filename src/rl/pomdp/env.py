@@ -51,16 +51,29 @@ class Environment:
     def nobs(self):
         return self.ospace.nelems
 
-    def new(self):
-        return self.model.s0model.sample()
+    # def new(self):
+    #     return self.model.s0model.sample()
+
+    def new(self, shape=(), *, device=torch.device('cpu')):
+        return self.model.s0model.sample(shape).to(device)
 
     def step(self, s, a):
+        shape = s.shape
+
+        # TODO fuck this is.. wrong... use shape, sample multiple times... then
+        # select
+
+        device = s.device
+        s = s.cpu()
+        a = a.cpu()
+
         s1 = self.model.s1model.sample()[s, a]
         o = self.model.omodel.sample()[s, a, s1]
-        r = float(self.model.rewards[s, a, s1])
+        r = self.model.rewards[s, a, s1]
 
-        self.logger.debug(f'step():  {s} {a} -> {s1} {o} {r}')
-        return r, o, s1
+        # self.logger.debug(f'step():  {s} {a} -> {s1} {o} {r}')
+        # return r, o, s1
+        return r.to(device), o.to(device), s1.to(device)
 
     @staticmethod
     def from_fname(fname):
@@ -94,6 +107,9 @@ class Environment:
         s1model = Categorical(probs=torch.tensor(T))
         omodel = Categorical(probs=torch.tensor(O))
         rewards = torch.tensor(R)
+
+        # import ipdb
+        # ipdb.set_trace()
 
         env.model = Model(s0model, s1model, omodel, rewards)
         return env
