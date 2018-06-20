@@ -115,7 +115,7 @@ from torch.distributions import Categorical
 
 
 class FSC:
-    def __init__(self, env, nnodes, gain=1., critic=False, device=None):
+    def __init__(self, env, nnodes, gain=1., critic=False, device=torch.device('cpu')):
         super().__init__()
         self.env = env
         # self.nspace = indextools.RangeSpace(nnodes)
@@ -163,13 +163,14 @@ class FSC:
 
         return parameters
 
-    def new(self, shape=(), *, device=None):
+    def new(self, shape=(), *, device=torch.device('cpu')):
         n = torch.zeros(shape).to(device, torch.long)
         nnll = torch.zeros(shape).to(device)
         return n, nnll
 
     def act(self, n):
         probs = self.astrat(n)
+        # TODO use.... logits instead?
         dist = Categorical(probs)
         sample = dist.sample()
         nll = -dist.log_prob(sample)
@@ -227,7 +228,7 @@ class FSC:
 
         return parameters
 
-    def new(self, shape=(), *, device=None):
+    def new(self, shape=(), *, device=torch.device('cpu')):
         n = torch.zeros(shape).to(device, torch.long)
         nnll = torch.zeros(shape).to(device)
         return n, nnll
@@ -236,16 +237,20 @@ class FSC:
         a, anll = self.ml.astrat.sample(n)
 
         if self.ml.critic is not None:
-            v = self.ml.critic(n).squeeze(-1)
-            return a, anll, v
+            return a, anll, self.value(n)
 
         return a, anll
+
+    def anll(self, n, a):
+        return self.ml.astrat.nll(n, a)
+
+    def value(self, n):
+        return self.ml.critic(n).squeeze(-1)
 
     def step(self, n, o):
         n1, nnll = self.ml.ostrat.sample(n, o)
 
         if self.ml.critic is not None:
-            v = self.ml.critic(n1).squeeze(-1)
-            return n1, nnll, v
+            return n1, nnll, self.value(n1)
 
         return n1, nnll

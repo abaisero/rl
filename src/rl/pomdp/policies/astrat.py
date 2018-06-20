@@ -23,3 +23,9 @@ class AStrategy(nn.Module):
         sample = dist.sample()
         nll = -dist.log_prob(sample)
         return sample, nll
+
+    def nll(self, n, a):
+        probs = self(n)
+        dist = Categorical(probs)
+        nll = -dist.log_prob(a)
+        return nll

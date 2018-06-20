@@ -10,7 +10,9 @@ from .fsc_structured import FSC_Structured
 from .fsc_file import FSC_File
 from .fsc_reactive import FSC_Reactive
 
-# from .qlearning import Qlearning
+from .astrat import AStrategy
+from .ostrat import OStrategy, OStrategy_Sparse, OStrategy_Reactive
+from .nvalue import Value
 
 
 parser = argparse.ArgumentParser(description='Policy')
@@ -41,7 +43,7 @@ _parser.add_argument('k', type=int, help='number of observations')
 # _parser.add_argument('n', type=int, help='number of observations')
 
 
-def factory(env, argstr):
+def factory(env, config, argstr):
     args = parser.parse_args(argstr.split())
 
     # if getattr(args, 'belief', False):
@@ -50,25 +52,35 @@ def factory(env, argstr):
     #     return BeliefFSC(env, fsc)
 
     if args.policy == 'cf':
+        raise NotImplementedError
         return CF.from_namespace(env, args)
     elif args.policy == 'reactive':
-        return Reactive.from_namespace(env, args)
+        ostrat = OStrategy_Reactive(env.nobs, 1)
+        astrat = AStrategy(ostrat.nnodes, env.nactions, gain=config.gain)
+        critic = Value(ostrat.nnodes) if config.critic else None
+        policy = FSC(astrat, ostrat, critic=critic)
     elif args.policy == 'fsc':
-        return FSC.from_namespace(env, args)
+        astrat = AStrategy(args.n, env.nactions, gain=config.gain)
+        ostrat = OStrategy(args.n, env.nobs, gain=config.gain)
+        critic = Value(args.n) if config.critic else None
+        policy = FSC(astrat, ostrat, critic=critic)
     elif args.policy == 'fsc_sparse':
-        return FSC_Sparse.from_namespace(env, args)
+        astrat = policies.AStrategy(args.n, env.nactions, gain=config.gain)
+        ostrat = policies.OStrategy_Sparse(args.n, env.nobs, args.k, gain=config.gain)
+        critic = Value(args.n) if config.critic else None
+        policy = FSC(astrat, ostrat, critic=critic)
     elif args.policy == 'fsc_structured':
+        raise NotImplementedError
         return FSC_Structured.from_namespace(env, args)
     elif args.policy == 'fsc_file':
+        raise NotImplementedError
         return FSC_File.from_namespace(env, args)
     elif args.policy == 'fsc_reactive':
-        return FSC_Reactive.from_namespace(env, args)
-    # elif args.policy == 'qlearning':
-    #     return Qlearning.from_namespace(env, args)
+        ostrat = OStrategy_Reactive(env.nobs, args.k)
+        astrat = AStrategy(ostrat.nnodes, env.nactions, gain=config.gain)
+        critic = Value(ostrat.nnodes) if config.critic else None
+        policy = FSC(astrat, ostrat, critic=critic)
+    else:
+        raise ValueError(f'Policy `{args.policy}` not recognized')
 
-    raise ValueError(f'Policy `{args.policy}` not recognized')
-
-
-from .astrat import AStrategy
-from .ostrat import OStrategy, OStrategy_Sparse, OStrategy_Reactive
-from .nvalue import Value
+    return policy

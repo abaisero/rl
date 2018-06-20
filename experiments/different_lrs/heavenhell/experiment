@@ -1,16 +1,16 @@
 #!/usr/bin/zsh
 
-env=loadunload
+env=heavenhell
 
 opts=(--runs 2 --episodes 2 --samples 2 --steps 2)
-opts=(--runs 100 --episodes 50 --samples 10 --steps 100 --optim adam --clip 3 --l .7 --device 'cuda:1')
+opts=(--runs 100 --episodes 50 --samples 10 --steps 100 --optim adam --clip 3 --l .7 --device 'cpu')
 
 lr=.3
 for algo in 'vanilla' 'baseline' 'actorcritic' 'acl'; do
   for lra in .001 .003 .01 .03 .1 .3 1 3 10 30; do
     for lrb in .001 .003 .01 .03 .1 .3 1 3 10 30; do
-      out="${env}_fsc_4_${algo}_${lr}_${lra}_${lrb}"
-      discounted.py $opts --out $out --lr $lr --lra $lra --lrb $lrb $env.pomdp 'fsc 4' $algo
+      out="${env}_fsc_20_${algo}_${lr}_${lra}_${lrb}"
+      discounted.py $opts --out $out --lr $lr --lra $lra --lrb $lrb $env.pomdp 'fsc 20' $algo
     done
   done
 done

@@ -51,24 +51,25 @@ class Environment:
     def nobs(self):
         return self.ospace.nelems
 
-    # def new(self):
-    #     return self.model.s0model.sample()
-
     def new(self, shape=(), *, device=torch.device('cpu')):
         return self.model.s0model.sample(shape).to(device)
 
     def step(self, s, a):
-        shape = s.shape
-
-        # TODO fuck this is.. wrong... use shape, sample multiple times... then
-        # select
-
         device = s.device
         s = s.cpu()
         a = a.cpu()
 
-        s1 = self.model.s1model.sample()[s, a]
-        o = self.model.omodel.sample()[s, a, s1]
+        # NOTE following was buggy;  not truly independent samples
+        # s1 = self.model.s1model.sample()[s, a]
+        # o = self.model.omodel.sample()[s, a, s1]
+        # r = self.model.rewards[s, a, s1]
+
+        shape = s.shape
+        size = s.nelement()
+        idx = torch.arange(size).reshape(shape).long()
+
+        s1 = self.model.s1model.sample((size,))[idx, s, a]
+        o = self.model.omodel.sample((size,))[idx, s, a, s1]
         r = self.model.rewards[s, a, s1]
 
         # self.logger.debug(f'step():  {s} {a} -> {s1} {o} {r}')

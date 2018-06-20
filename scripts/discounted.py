@@ -21,11 +21,11 @@ parser = argparse.ArgumentParser(description='PyTorch FSC example')
 parser.add_argument('--seed', type=int, default=None)
 parser.add_argument('--out', type=str, default=None)
 
-parser.add_argument('--device', type=torch.device,
+parser.add_argument('--device', type=str,
                     default='cuda' if torch.cuda.is_available() else 'cpu')
 
 parser.add_argument('env', type=str, help='environment')
-# parser.add_argument('policy', type=str, help='policy')
+parser.add_argument('policy', type=str, help='policy')
 parser.add_argument('algo', type=str,
                     choices=['vanilla', 'baseline', 'actorcritic', 'acl'],
                     default='vanilla')
@@ -56,12 +56,13 @@ parser.add_argument('--log-interval', type=int, default=10, metavar='N',
                     help='interval between training status logs (default: 10)')
 
 config = parser.parse_args()
+device = torch.device(config.device)
 
 def make_r2g(n, v):
     r2g = v ** (-np.subtract.outer(range(n), range(n)))
     tril_idx = np.tril_indices(n, -1)
     r2g[tril_idx] = 0.
-    return torch.from_numpy(r2g.astype(np.float32)).to(config.device)
+    return torch.from_numpy(r2g.astype(np.float32)).to(device)
 
 
 # class FSC_Sparse:
@@ -408,8 +409,8 @@ def make_policy(config):
     # TODO implement Structured Controller
 
     # NOTE FSC
-    astrat = policies.AStrategy(nnodes, env.nactions, gain=config.gain)
-    ostrat = policies.OStrategy(nnodes, env.nobs, gain=config.gain)
+    # astrat = policies.AStrategy(nnodes, env.nactions, gain=config.gain)
+    # ostrat = policies.OStrategy(nnodes, env.nobs, gain=config.gain)
 
     # NOTE FSC_Sparse
     # K = nnodes / 2
@@ -421,9 +422,9 @@ def make_policy(config):
     # ostrat = policies.OStrategy_Reactive(env.nobs, K)
     # astrat = policies.AStrategy(ostrat.nnodes, env.nactions, gain=config.gain)
 
-    critic = policies.Value(nnodes) if config.algo != 'vanilla' else None
-    policy = policies.FSC(astrat, ostrat, critic=critic)
-    policy.ml.to(config.device)
+    config.critic = config.algo != 'vanilla'
+    policy = policies.factory(env, config, config.policy)
+    policy.ml.to(device)
 
     if config.optim == 'sgd':
         optimizer = optim.SGD(policy.parameters(config),
@@ -442,25 +443,25 @@ def make_algo(config):
                                  episodes=config.episodes,
                                  samples=config.samples,
                                  steps=config.steps,
-                                 device=config.device)
+                                 device=device)
     elif config.algo == 'baseline':
         algo = functools.partial(baseline,
                                  episodes=config.episodes,
                                  samples=config.samples,
                                  steps=config.steps,
-                                 device=config.device)
+                                 device=device)
     elif config.algo == 'actorcritic':
         algo = functools.partial(actorcritic,
                                  episodes=config.episodes,
                                  samples=config.samples,
                                  steps=config.steps,
-                                 device=config.device)
+                                 device=device)
     elif config.algo == 'acl':
         algo = functools.partial(acl,
                                  episodes=config.episodes,
                                  samples=config.samples,
                                  steps=config.steps,
-                                 device=config.device,
+                                 device=device,
                                  l=config.l)
 
     return algo
@@ -473,8 +474,9 @@ if __name__ == '__main__':
         torch.manual_seed(config.seed)
         np.random.seed(config.seed)
 
-    nnodes = 4
+    config.critic = config.algo != 'vanilla'
     env = pomdp.Environment.from_fname(config.env)
+    # policy = policies.factory(env, config, config.policy)
 
     rewards, returns = [], []
     # TODO just run in different processes?  Maybe not..... and...?
@@ -490,18 +492,9 @@ if __name__ == '__main__':
     returns = torch.stack(returns).cpu()
 
     if config.out is not None:
-        fname = f'{config.out}.pt'
-        torch.save(returns, fname)
-
-        fname = f'{config.out}.txt'
-        args='\n'.join(sys.argv)
-        with open(fname, 'w') as f:
-            print('# sys argv', file=f)
-            print(sys.argv, file=f)
-            print(file=f)
-            print('# args', file=f)
-            print(args, file=f)
-            print(file=f)
-            print('# config', file=f)
-            print(config, file=f)
-            print(file=f)
+        data = dict(
+            returns=returns,
+            argv=sys.argv,
+            config=config,
+        )
+        torch.save(data, f'{config.out}.pt')
