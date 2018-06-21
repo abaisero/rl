@@ -5,61 +5,6 @@ from torch.distributions import Categorical
 
 from .multi_embedding import MultiEmbedding_from_pretrained
 
-
-class OStrategy(nn.Module):
-    def __init__(self, nnodes, nobs, gain=1.):
-        super().__init__()
-        embeddings = torch.eye(nnodes * nobs).reshape(nnodes, nobs, -1)
-        self.embedding = MultiEmbedding_from_pretrained(embeddings=embeddings)
-        self.linear = nn.Linear(nnodes * nobs, nnodes, bias=False)
-        nn.init.xavier_normal_(self.linear.weight, gain)
-
-    def forward(self, n, o):
-        em = self.embedding(n, o)
-        scores = self.linear(em)
-        return F.softmax(scores, dim=-1)
-
-    def sample(self, n, o):
-        probs = self(n, o)
-        dist = Categorical(probs)
-        sample = dist.sample()
-        nll = -dist.log_prob(sample)
-        return sample, nll
-
-
-# TODO fix
-class OStrategy_Sparse(nn.Module):
-    def __init__(self, nnodes, nobs, K, gain=1.):
-        super().__init__()
-        embeddings = torch.eye(nnodes * nobs).reshape(nnodes, nobs, -1)
-        self.embedding = MultiEmbedding_from_pretrained(embeddings=embeddings)
-        self.linear = nn.Linear(nnodes * nobs, nnodes, bias=False)
-        nn.init.xavier_normal_(self.linear.weight, gain)
-
-        membeddings = torch.where(
-            make_mask(nnodes, nobs, K),
-            torch.tensor(0.),
-            torch.tensor(-float('inf')),
-        )
-        self.membedding = MultiEmbedding_from_pretrained(
-            embeddings=membeddings)
-
-    def forward(self, n, o):
-        em = self.embedding(n, o)
-        scores = self.linear(em)
-
-        # TODO maybe initialization should also take the mask into acocunt
-        mscores = self.membedding(n, o)
-        return F.softmax(scores + mscores, dim=-1)
-
-    def sample(self, n, o):
-        probs = self(n, o)
-        dist = Categorical(probs)
-        sample = dist.sample()
-        nll = -dist.log_prob(sample)
-        return sample, nll
-
-
 import numpy as np
 import numpy.linalg as la
 import numpy.random as rnd
@@ -109,6 +54,59 @@ def make_mask(nnodes, nobs, K):
     return torch.from_numpy(nmask.astype(np.uint8))
 
 
+class OStrategy(nn.Module):
+    def __init__(self, nnodes, nobs, gain=1.):
+        super().__init__()
+        embeddings = torch.eye(nnodes * nobs).reshape(nnodes, nobs, -1)
+        self.embedding = MultiEmbedding_from_pretrained(embeddings=embeddings)
+        self.linear = nn.Linear(nnodes * nobs, nnodes, bias=False)
+        nn.init.xavier_normal_(self.linear.weight, gain)
+
+    def forward(self, n, o):
+        em = self.embedding(n, o)
+        scores = self.linear(em)
+        return F.log_softmax(scores, dim=-1)
+
+    def sample(self, n, o):
+        logits = self(n, o)
+        dist = Categorical(logits=logits)
+        sample = dist.sample()
+        nll = -dist.log_prob(sample)
+        return sample, nll
+
+
+class OStrategy_Sparse(nn.Module):
+    def __init__(self, nnodes, nobs, K, gain=1.):
+        super().__init__()
+        embeddings = torch.eye(nnodes * nobs).reshape(nnodes, nobs, -1)
+        self.embedding = MultiEmbedding_from_pretrained(embeddings=embeddings)
+        self.linear = nn.Linear(nnodes * nobs, nnodes, bias=False)
+        nn.init.xavier_normal_(self.linear.weight, gain)
+
+        membeddings = torch.where(
+            make_mask(nnodes, nobs, K),
+            torch.tensor(0.),
+            torch.tensor(-float('inf')),
+        )
+        self.membedding = MultiEmbedding_from_pretrained(
+            embeddings=membeddings)
+
+    def forward(self, n, o):
+        em = self.embedding(n, o)
+        scores = self.linear(em)
+
+        # TODO maybe initialization should also take the mask into acocunt
+        mscores = self.membedding(n, o)
+        return F.log_softmax(scores + mscores, dim=-1)
+
+    def sample(self, n, o):
+        logits = self(n, o)
+        dist = Categorical(logits=logits)
+        sample = dist.sample()
+        nll = -dist.log_prob(sample)
+        return sample, nll
+
+
 class OStrategy_Reactive(nn.Module):
     def __init__(self, O, K):
         super().__init__()
@@ -131,7 +129,6 @@ class OStrategy_Reactive(nn.Module):
 
     def sample(self, n, o):
         n1 = self._step(n, o)
-
         return n1, torch.tensor(0.).to(n1)
 
     def _encode(self, os):

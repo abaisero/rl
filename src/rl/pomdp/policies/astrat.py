@@ -15,17 +15,16 @@ class AStrategy(nn.Module):
     def forward(self, n):
         em = self.embedding(n)
         scores = self.linear(em)
-        return F.softmax(scores, dim=-1)
+        return F.log_softmax(scores, dim=-1)
 
     def sample(self, n):
-        probs = self(n)
-        dist = Categorical(probs)
+        logits = self(n)
+        dist = Categorical(logits=logits)
         sample = dist.sample()
         nll = -dist.log_prob(sample)
         return sample, nll
 
     def nll(self, n, a):
-        probs = self(n)
-        dist = Categorical(probs)
-        nll = -dist.log_prob(a)
-        return nll
+        logits = self(n)
+        dist = Categorical(logits=logits)
+        return -dist.log_prob(a)

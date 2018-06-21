@@ -3,10 +3,7 @@ import functools
 
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 import torch.optim as optim
-from torch.distributions import Categorical
-import torch.multiprocessing as tmp
 from torch.utils.data import Dataset, DataLoader
 
 import numpy as np
@@ -52,6 +49,7 @@ parser.add_argument('--log-interval', type=int, default=10, metavar='N',
 
 config = parser.parse_args()
 
+
 def make_r2g(n, gamma):
     r2g = gamma ** (-np.subtract.outer(range(n), range(n)))
     tril_idx = np.tril_indices(n, -1)
@@ -59,410 +57,9 @@ def make_r2g(n, gamma):
     return torch.from_numpy(r2g.astype(np.float32))
 
 
-# class Identity(nn.Module):
-#     def forward(Self, inputs):
-#         return inputs
-
-
-# class MultiEmbedding_from_pretrained(nn.Module):
-#     def __init__(self, embeddings):
-#         super().__init__()
-#         idims = torch.tensor(embeddings.shape[:-1])
-#         odim = embeddings.shape[-1]
-
-#         self.midx = idims.cumprod(dim=0).unsqueeze(dim=0) / idims
-#         embeddings_ = embeddings.reshape((-1, odim))
-#         self.embedding = nn.Embedding.from_pretrained(embeddings_)
-
-#     def forward(self, *codes):
-#         code = torch.stack(codes, dim=-1)
-#         # TODO change this to a standard batched product!  cuda does not allow integer stuff
-#         # print('---')
-#         # print(F.linear(code, self.midx).squeeze(dim=-1))
-#         # print((code * self.midx).sum(1))
-
-#         # import ipdb;  ipdb.set_trace()
-#         # code = F.linear(code, self.midx).squeeze(dim=-1)
-#         code = (code * self.midx).sum(1)
-#         # print('code', code)
-#         em = self.embedding(code)
-#         # print('em', em)
-#         return em
-
-
-# class AStrategy(nn.Module):
-#     def __init__(self, nnodes, nactions, gain=1.):
-#         super().__init__()
-#         embeddings = torch.eye(nnodes)
-#         self.embedding = nn.Embedding.from_pretrained(embeddings)
-#         self.linear = nn.Linear(nnodes, nactions, bias=False)
-#         nn.init.xavier_normal_(self.linear.weight, gain)
-
-#     def forward(self, n):
-#         em = self.embedding(n)
-#         scores = self.linear(em)
-#         return F.softmax(scores, dim=-1)
-
-
-# class OStrategy(nn.Module):
-#     def __init__(self, nnodes, nobs, gain=1.):
-#         super().__init__()
-#         embeddings = torch.eye(nnodes * nobs).reshape(nnodes, nobs, -1)
-#         self.embedding = MultiEmbedding_from_pretrained(embeddings=embeddings)
-#         self.linear = nn.Linear(nnodes * nobs, nnodes, bias=False)
-#         nn.init.xavier_normal_(self.linear.weight, gain)
-
-#     def forward(self, n, o):
-#         em = self.embedding(n, o)
-#         scores = self.linear(em)
-#         return F.softmax(scores, dim=-1)
-
-
-# import numpy.linalg as la
-# import numpy.random as rnd
-# import itertools as itt
-
-
-# def make_mask(nnodes, nobs, K):
-#     # TODO change to pytorch tensor?
-#     combs = list(itt.combinations(range(nobs), 2))
-#     test_mask = np.zeros((nobs, len(combs)))
-#     for i, comb in enumerate(combs):
-#         test_mask[comb, i] = 1, -1
-#     # test_mask = torch.from_numpy(test_mask)
-
-#     for nfails in itt.count():
-#         if nfails == 100:
-#             raise ValueError('Could not make mask.')
-
-#         nmask = np.array([
-#             [rnd.permutation(nnodes) for _ in range(nobs)]
-#             for _ in range(nnodes)]) < K
-#         # nmask = torch.stack([
-#         #     torch.stack([torch.randperm(nnodes) for _ in range(nobs)])
-#         #     for _ in range(nnodes)]) < K
-
-#         # check that graph is not disjoint
-#         _nn = nmask.sum(axis=1)
-#         test = la.multi_dot([_nn] * nnodes)
-#         if np.any(test == 0):
-#             continue
-
-#         # # check that graph is not disjoint
-#         # _nn = nmask.sum(dim=1)
-#         # test = torch.eye(nnodes).long()
-#         # for _ in range(nnodes):
-#         #     test = test @ _nn
-#         # if (test == 0).any():
-#         #     continue
-
-#         # check that each observation gives a different transition mask
-#         test = np.einsum('hyg,yn->hng', nmask, test_mask)
-#         if np.all(test == 0, axis=0).any():
-#             continue
-
-#         break
-
-#     return torch.from_numpy(nmask.astype(np.uint8))
-
-
-# class OStrategy_Masked(nn.Module):
-#     def __init__(self, nnodes, nobs, K, gain=1.):
-#         super().__init__()
-#         embeddings = torch.eye(nnodes * nobs).reshape(nnodes, nobs, -1)
-#         self.embedding = MultiEmbedding_from_pretrained(embeddings=embeddings)
-#         self.linear = nn.Linear(nnodes * nobs, nnodes, bias=False)
-#         nn.init.xavier_normal_(self.linear.weight, gain)
-
-#         membeddings = torch.where(
-#             make_mask(nnodes, nobs, K),
-#             torch.tensor(0.),
-#             torch.tensor(-float('inf'))
-#         )
-#         self.membedding = MultiEmbedding_from_pretrained(
-#             embeddings=membeddings)
-
-#     def forward(self, n, o):
-#         em = self.embedding(n, o)
-#         scores = self.linear(em)
-
-#         # TODO maybe initialization should also take the mask into acocunt
-#         mscores = self.membedding(n, o)
-#         return F.softmax(scores + mscores, dim=-1)
-
-
-# class Value(nn.Module):
-#     def __init__(self, nnodes, gain=1.):
-#         super().__init__()
-#         embeddings = torch.eye(nnodes)
-#         self.embedding = nn.Embedding.from_pretrained(embeddings)
-#         self.affine = nn.Linear(nnodes, 1, bias=True)
-#         nn.init.xavier_normal_(self.affine.weight, gain)
-#         nn.init.constant_(self.affine.bias, 0)
-
-#     def forward(self, n):
-#         em = self.embedding(n)
-#         return self.affine(em)
-
-
-# class FSC:
-#     def __init__(self, env, nnodes, gain=1., critic=False):
-#         super().__init__()
-#         self.env = env
-#         # self.nspace = indextools.RangeSpace(nnodes)
-
-#         # self._nshare = Identity()
-#         self.astrat = AStrategy(nnodes, env.nactions, gain=gain)
-#         self.ostrat = OStrategy(nnodes, env.nobs, gain=gain)
-
-#         self.modules = nn.ModuleList()
-#         # self.modules.add_module('nshare', self._nshare)
-#         self.modules.add_module('astrat', self.astrat)
-#         self.modules.add_module('ostrat', self.ostrat)
-
-#         self.critic = None
-#         if critic:
-#             self.critic = Value(nnodes)
-#             self.modules.add_module('critic', self.critic)
-
-#     def parameters(self, config=None):
-#         def rgfilter(parameters):
-#             return filter(lambda p: p.requires_grad, parameters)
-
-#         if config is None:
-#             return rgfilter(self.modules.parameters())
-
-#         parameters = []
-
-#         pdict = {'params': rgfilter(self.astrat.parameters())}
-#         if config.lra is not None:
-#             pdict['lr'] = config.lra
-#         parameters.append(pdict)
-
-#         pdict = {'params': rgfilter(self.ostrat.parameters())}
-#         if config.lrb is not None:
-#             pdict['lr'] = config.lrb
-#         parameters.append(pdict)
-
-#         if self.critic:
-#             pdict = {'params': rgfilter(self.critic.parameters())}
-#             if config.lrc is not None:
-#                 pdict['lr'] = config.lrc
-#             parameters.append(pdict)
-
-#         return parameters
-
-#     def new(self, shape=()):
-#         return torch.full(shape, 0).long(), torch.zeros(shape)
-
-#     def act(self, n):
-#         probs = self.astrat(n)
-#         dist = Categorical(probs)
-#         sample = dist.sample()
-#         nll = -dist.log_prob(sample)
-
-#         if self.critic:
-#             return sample, nll, self.critic(n).squeeze(-1)
-
-#         return sample, nll
-
-#     def anll(self, n, a):
-#         probs = self.astrat(n)
-#         dist = Categorical(probs)
-#         return -dist.log_prob(a)
-
-#     def step(self, n, o):
-#         probs = self.ostrat(n, o)
-#         dist = Categorical(probs)
-#         sample = dist.sample()
-#         nll = -dist.log_prob(sample)
-
-#         if self.critic:
-#             return sample, nll, self.critic(sample).squeeze(-1)
-
-#         return sample, nll
-
-
-# class FSC_Sparse:
-#     def __init__(self, env, nnodes, K, gain=1., critic=False):
-#         super().__init__()
-#         self.env = env
-
-#         self.astrat = AStrategy(nnodes, env.nactions, gain=gain)
-#         self.ostrat = OStrategy_Masked(nnodes, env.nobs, K, gain=gain)
-
-#         self.modules = nn.ModuleList()
-#         self.modules.add_module('astrat', self.astrat)
-#         self.modules.add_module('ostrat', self.ostrat)
-
-#         self.critic = None
-#         if critic:
-#             self.critic = Value(nnodes)
-#             self.modules.add_module('critic', self.critic)
-
-#     def parameters(self, config=None):
-#         def rgfilter(parameters):
-#             return filter(lambda p: p.requires_grad, parameters)
-
-#         if config is None:
-#             return rgfilter(self.modules.parameters())
-
-#         parameters = []
-
-#         pdict = {'params': rgfilter(self.astrat.parameters())}
-#         if config.lra is not None:
-#             pdict['lr'] = config.lra
-#         parameters.append(pdict)
-
-#         pdict = {'params': rgfilter(self.ostrat.parameters())}
-#         if config.lrb is not None:
-#             pdict['lr'] = config.lrb
-#         parameters.append(pdict)
-
-#         if self.critic:
-#             pdict = {'params': rgfilter(self.critic.parameters())}
-#             if config.lrc is not None:
-#                 pdict['lr'] = config.lrc
-#             parameters.append(pdict)
-
-#         return parameters
-
-#     def new(self, shape=()):
-#         return torch.full(shape, 0).long(), torch.zeros(shape)
-
-#     def act(self, n):
-#         probs = self.astrat(n)
-#         dist = Categorical(probs)
-#         sample = dist.sample()
-#         nll = -dist.log_prob(sample)
-
-#         if self.critic:
-#             return sample, nll, self.critic(n).squeeze(-1)
-
-#         return sample, nll
-
-#     def anll(self, n, a):
-#         probs = self.astrat(n)
-#         dist = Categorical(probs)
-#         return -dist.log_prob(a)
-
-#     def step(self, n, o):
-#         probs = self.ostrat(n, o)
-#         dist = Categorical(probs)
-#         sample = dist.sample()
-#         nll = -dist.log_prob(sample)
-
-#         if self.critic:
-#             return sample, nll, self.critic(sample).squeeze(-1)
-
-#         return sample, nll
-
-
-# class FSC_Reactive:
-#     def __init__(self, env, K, gain=1., critic=False):
-#         super().__init__()
-#         self.env = env
-#         self.K = K
-
-#         # TODO triple check!!!
-#         self._no = env.nobs
-#         self._mod = self._no ** (K - 1)
-#         self._bases = torch.cat([
-#             torch.zeros((1,), dtype=torch.long),
-#             torch.full((K,), self._no).long().cumprod(0).cumsum(0) / self._no,
-#         ])
-#         self._bases_extra = torch.cat([
-#             self._bases,
-#             self._bases[-1].unsqueeze(0),
-#         ])
-#         self._decode_key = self._no ** torch.arange(K - 1, -1, -1).long()
-
-#         self.nnodes = self._bases[-1] + self._no ** K
-#         self.astrat = AStrategy(self.nnodes, env.nactions, gain=gain)
-
-#         self.modules = nn.ModuleList()
-#         self.modules.add_module('astrat', self.astrat)
-
-#         self.critic = None
-#         if critic:
-#             self.critic = Value(self.nnodes)
-#             self.modules.add_module('critic', self.critic)
-
-#     def parameters(self, config=None):
-#         def rgfilter(parameters):
-#             return filter(lambda p: p.requires_grad, parameters)
-
-#         if config is None:
-#             return rgfilter(self.modules.parameters())
-
-#         parameters = []
-
-#         pdict = {'params': rgfilter(self.astrat.parameters())}
-#         if config.lra is not None:
-#             pdict['lr'] = config.lra
-#         parameters.append(pdict)
-
-#         if self.critic:
-#             pdict = {'params': rgfilter(self.critic.parameters())}
-#             if config.lrc is not None:
-#                 pdict['lr'] = config.lrc
-#             parameters.append(pdict)
-
-#         return parameters
-
-#     def new(self, shape=()):
-#         return torch.full(shape, 0).long(), torch.zeros(shape)
-
-#     def act(self, n):
-#         probs = self.astrat(n)
-#         dist = Categorical(probs)
-#         sample = dist.sample()
-#         nll = -dist.log_prob(sample)
-
-#         if self.critic:
-#             return sample, nll, self.critic(n).squeeze(-1)
-
-#         return sample, nll
-
-#     def anll(self, n, a):
-#         probs = self.astrat(n)
-#         dist = Categorical(probs)
-#         return -dist.log_prob(a)
-
-#     def step(self, n, o):
-#         n1 = self._step(n, o)
-
-#         if self.critic:
-#             return n1, 0., self.critic(n1).squeeze(-1)
-
-#         return n1, 0.
-
-#     def _encode(self, os):
-#         raise NotImplementedError
-
-#     def _decode(self, n):
-#         ibase = self._bases.le(n.unsqueeze(-1)).sum(1) - 1
-#         base = self._bases[ibase]
-#         os_full = self._decode_full(n - base)
-#         cond = torch.stack([torch.arange(self.K).long()] * len(n))
-#         cond.lt_((self.K-ibase).unsqueeze(-1))
-#         return torch.where(cond.byte(), torch.tensor(-1), os_full.t())
-
-#     def _decode_full(self, code):
-#         # TODO I should transpose here, not outside
-#         return code.div(self._decode_key.unsqueeze(-1)) % self._no
-
-#     def _step(self, n, o):
-#         # rule for k-order reactive internal dynamics
-#         ibase = self._bases.le(n.unsqueeze(-1)).sum(1) - 1
-#         base = self._bases[ibase]
-#         base1 = self._bases_extra[ibase + 1]
-#         return ((n - base) % self._mod) * self._no + base1 + o
-
-
 def evaluate(label, env, policy, samples, steps):
     r2g = make_r2g(steps, env.gamma)
-    discounts = r2g[0]
+    # discounts = r2g[0]
 
     s = env.new((samples,))
     n = policy.new((samples,))[0]
@@ -487,10 +84,10 @@ def evaluate(label, env, policy, samples, steps):
     return (f'Evaluation {label};\t'
             f'Return: {rets.mean():.2f} / {rets.std():.2f}')
 
-        # print(f'Evaluation {label};\t'
-        #       # f'Time steps: {steps};\t'
-        #       # f'Reward: {rewards.mean():.2f} / {rewards.std():.2f};\t'
-        #       f'Return: {rets.mean():.2f} / {rets.std():.2f}')
+    # print(f'Evaluation {label};\t'
+    #       # f'Time steps: {steps};\t'
+    #       # f'Reward: {rewards.mean():.2f} / {rewards.std():.2f};\t'
+    #       f'Return: {rets.mean():.2f} / {rets.std():.2f}')
 
 
 def vanilla(env, policy, optimizer, memreplay, episodes, samples, steps):
@@ -551,11 +148,12 @@ def vanilla(env, policy, optimizer, memreplay, episodes, samples, steps):
 
 
 def baseline(env, policy, optimizer, memreplay, episodes, samples, steps):
-    # TODO better way of selecting what to train... whether actor only or critic only or what..
+    # TODO better way of selecting what to train...
+    # whether actor only or critic only or what..
 
     # TODO I still need separate optimizers..
 
-    criterion = nn.MSELoss(reduce=False)
+    # criterion = nn.MSELoss(reduce=False)
 
     r2g = make_r2g(steps, env.gamma)
     discounts = r2g[0]
@@ -632,10 +230,10 @@ def memtrain_vanilla(env, policy, optimizer, memreplay, steps):
     for idx_batch, data in enumerate(dloader):
         mem_actions = data['actions']
         mem_observations = data['observations']
-        mem_rewards = data['rewards']
+        # mem_rewards = data['rewards']
         mem_returns = data['returns']
         mem_anlls = data['anlls']
-        mem_nnlls = data['nnlls']
+        # mem_nnlls = data['nnlls']
 
         #  One new simulation per memory
         samples = len(mem_actions)
@@ -649,8 +247,8 @@ def memtrain_vanilla(env, policy, optimizer, memreplay, steps):
 
             a = mem_actions[:, t]
             anll = policy.anll(n, a)
-            r = mem_rewards[:, t]
             o = mem_observations[:, t]
+            # r = mem_rewards[:, t]
             n1, nnll = policy.step(n, o)
 
             anlls[:, t] = anll
@@ -674,8 +272,8 @@ def memtrain_vanilla(env, policy, optimizer, memreplay, steps):
                                          config.clip, 'inf')
         optimizer.step()
 
-    rewards = mem_rewards
-    returns0 = mem_returns[:, 0]
+    # rewards = mem_rewards
+    # returns0 = mem_returns[:, 0]
 
     # print(f'Episode;\tTime steps: {steps};\t'
     #       f'GNorm: {gnorm:.2e};\t'
@@ -694,10 +292,10 @@ def memtrain_baseline(env, policy, optimizer, memreplay, steps):
     for idx_batch, data in enumerate(dloader):
         mem_actions = data['actions']
         mem_observations = data['observations']
-        mem_rewards = data['rewards']
+        # mem_rewards = data['rewards']
         mem_returns = data['returns']
         mem_anlls = data['anlls']
-        mem_nnlls = data['nnlls']
+        # mem_nnlls = data['nnlls']
 
         #  One new simulation per memory
         samples = len(mem_actions)
@@ -711,7 +309,7 @@ def memtrain_baseline(env, policy, optimizer, memreplay, steps):
 
             a = mem_actions[:, t]
             anll = policy.anll(n, a)
-            r = mem_rewards[:, t]
+            # r = mem_rewards[:, t]
             o = mem_observations[:, t]
             n1, nnll = policy.step(n, o)
 
@@ -736,8 +334,8 @@ def memtrain_baseline(env, policy, optimizer, memreplay, steps):
                                          config.clip, 'inf')
         optimizer.step()
 
-    rewards = mem_rewards
-    returns0 = mem_returns[:, 0]
+    # rewards = mem_rewards
+    # returns0 = mem_returns[:, 0]
 
     # print(f'Episode;\tTime steps: {steps};\t'
     #       f'GNorm: {gnorm:.2e};\t'
@@ -751,7 +349,7 @@ def memtrain_baseline_criticonly(env, policy, optimizer, memreplay, steps):
     criterion = nn.MSELoss(reduce=False)
 
     r2g = make_r2g(steps, env.gamma)
-    discounts = r2g[0]
+    # discounts = r2g[0]
     idiscounts = r2g[:, -1]
 
     # batch_size too large and it won't work anymore
@@ -762,10 +360,10 @@ def memtrain_baseline_criticonly(env, policy, optimizer, memreplay, steps):
     for idx_batch, data in enumerate(dloader):
         mem_actions = data['actions']
         mem_observations = data['observations']
-        mem_rewards = data['rewards']
+        # mem_rewards = data['rewards']
         mem_returns = data['returns']
-        mem_anlls = data['anlls']
-        mem_nnlls = data['nnlls']
+        # mem_anlls = data['anlls']
+        # mem_nnlls = data['nnlls']
 
         #  One new simulation per memory
         samples = len(mem_actions)
@@ -781,7 +379,7 @@ def memtrain_baseline_criticonly(env, policy, optimizer, memreplay, steps):
             a = mem_actions[:, t]
             anll = policy.anll(n, a)
             b = policy.value(n)
-            r = mem_rewards[:, t]
+            # r = mem_rewards[:, t]
             o = mem_observations[:, t]
             n1, nnll, b1 = policy.step(n, o)
 
@@ -799,8 +397,8 @@ def memtrain_baseline_criticonly(env, policy, optimizer, memreplay, steps):
                                          config.clip, 'inf')
         optimizer.step()
 
-    rewards = mem_rewards
-    returns0 = mem_returns[:, 0]
+    # rewards = mem_rewards
+    # returns0 = mem_returns[:, 0]
 
     # print(f'Episode;\tTime steps: {steps};\t'
     #       f'GNorm: {gnorm:.2e};\t'
@@ -836,23 +434,10 @@ def factory_policy(config):
     # TODO implement File Controller
     # TODO implement Structured Controller
 
-    # NOTE FSC
-    # astrat = policies.AStrategy(nnodes, env.nactions, gain=config.gain)
-    # ostrat = policies.OStrategy(nnodes, env.nobs, gain=config.gain)
-
-    # NOTE FSC_Sparse
-    # K = nnodes / 2
-    # astrat = policies.AStrategy(nnodes, env.nactions, gain=config.gain)
-    # ostrat = policies.OStrategy_Sparse(nnodes, env.nobs, K, gain=config.gain)
-
-    # NOTE FSC_Reactive
-    # K = 3
-    # ostrat = policies.OStrategy_Reactive(env.nobs, K)
-    # astrat = policies.AStrategy(ostrat.nnodes, env.nactions, gain=config.gain)
-
     config.critic = config.algo != 'vanilla'
     policy = policies.factory(env, config, config.policy)
     return policy
+
 
 def factory_optimizer(policy, config):
     if config.optim == 'sgd':
@@ -908,8 +493,8 @@ if __name__ == '__main__':
     optimizer_real = factory_optimizer(policy, config)
     for idx_epoch in range(config.epochs):
         algo(env, policy, optimizer_real, memreplay,
-                      1, config.samples, config.steps)
-                      # config.episodes, config.samples, config.steps)
+             1, config.samples, config.steps)
+        #      config.episodes, config.samples, config.steps)
         if config.noreplay:
             msg = evaluate(f'epoch {idx_epoch} post-train', env, policy, samples=1000, steps=config.steps)
         experience += config.samples
@@ -922,4 +507,3 @@ if __name__ == '__main__':
 
         print(experience)
         print(msg)
-
