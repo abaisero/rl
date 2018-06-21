@@ -57,9 +57,9 @@ if __name__ == '__main__':
         fig, axes = plt.subplots(nas, nbs, sharex=sharex, sharey=sharey)
         fig.suptitle(algo)
 
-        for i, j in itt.product(range(nas), range(nbs)):
+        for (i, lra), (j, lrb) in itt.product(enumerate(lras),
+                                              enumerate(lrbs)):
             ax = axes[i, j]
-            lra, lrb = lras[i], lrbs[j]
 
             key = algo, lra, lrb
             if key in data:
