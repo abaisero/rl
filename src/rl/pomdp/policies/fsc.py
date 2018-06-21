@@ -1,6 +1,8 @@
 import torch
 import torch.nn as nn
 
+from rl.utils import wtuple
+
 
 class FSC:
     def __init__(self, astrat, ostrat, *, istrat=None, critic=None):
@@ -38,18 +40,18 @@ class FSC:
 
         return parameters
 
-    def new(self, shape=(), *, device=torch.device('cpu')):
-        n = torch.zeros(shape).to(device, torch.long)
-        nnll = torch.zeros(shape).to(device)
-        return n, nnll
+    def new(self, shape=()):
+        n = torch.zeros(shape).long()
+        nnll = torch.zeros(shape)
+        return wtuple(n, nnll)
 
     def act(self, n):
         a, anll = self.ml.astrat.sample(n)
 
         if self.ml.critic is not None:
-            return a, anll, self.value(n)
+            return wtuple(a, anll, self.value(n))
 
-        return a, anll
+        return wtuple(a, anll)
 
     def anll(self, n, a):
         return self.ml.astrat.nll(n, a)
@@ -61,6 +63,6 @@ class FSC:
         n1, nnll = self.ml.ostrat.sample(n, o)
 
         if self.ml.critic is not None:
-            return n1, nnll, self.value(n1)
+            return wtuple(n1, nnll, self.value(n1))
 
-        return n1, nnll
+        return wtuple(n1, nnll)

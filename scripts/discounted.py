@@ -58,6 +58,7 @@ parser.add_argument('--log-interval', type=int, default=10, metavar='N',
 config = parser.parse_args()
 device = torch.device(config.device)
 
+
 def make_r2g(n, v):
     r2g = v ** (-np.subtract.outer(range(n), range(n)))
     tril_idx = np.tril_indices(n, -1)
@@ -160,13 +161,13 @@ def vanilla(env, policy, optimizer, episodes, samples, steps, device):
         anlls = torch.empty((samples, steps)).to(device)
         nnlls = torch.empty((samples, steps)).to(device)
 
-        s = env.new((samples,), device=device)
-        n, nnll = policy.new((samples,), device=device)
+        s = env.new((samples,)).to(device)
+        n, nnll = policy.new((samples,)).to(device)
         for t in range(steps):
             nnlls[:, t] = nnll
 
             a, anll = policy.act(n)
-            r, o, s1 = env.step(s, a)
+            r, o, s1 = env.step(s, a).to(device)
             n1, nnll = policy.step(n, o)
 
             rewards[:, t] = r
@@ -217,13 +218,13 @@ def baseline(env, policy, optimizer, episodes, samples, steps, device):
         anlls = torch.empty((samples, steps)).to(device)
         nnlls = torch.empty((samples, steps)).to(device)
 
-        s = env.new((samples,), device=device)
-        n, nnll = policy.new((samples,), device=device)
+        s = env.new((samples,)).to(device)
+        n, nnll = policy.new((samples,)).to(device)
         for t in range(steps):
             nnlls[:, t] = nnll
 
             a, anll, b = policy.act(n)
-            r, o, s1 = env.step(s, a)
+            r, o, s1 = env.step(s, a).to(device)
             n1, nnll, b1 = policy.step(n, o)
 
             rewards[:, t] = r
@@ -280,13 +281,13 @@ def actorcritic(env, policy, optimizer, episodes, samples, steps, device):
         anlls = torch.empty((samples, steps)).to(device)
         nnlls = torch.empty((samples, steps)).to(device)
 
-        s = env.new((samples,), device=device)
-        n, nnll = policy.new((samples,), device=device)
+        s = env.new((samples,)).to(device)
+        n, nnll = policy.new((samples,)).to(device)
         for t in range(steps):
             nnlls[:, t] = nnll
 
             a, anll, b = policy.act(n)
-            r, o, s1 = env.step(s, a)
+            r, o, s1 = env.step(s, a).to(device)
             n1, nnll, b1 = policy.step(n, o)
 
             rewards[:, t] = r
@@ -346,13 +347,13 @@ def acl(env, policy, optimizer, episodes, samples, steps, device, *, l):
         anlls = torch.empty((samples, steps)).to(device)
         nnlls = torch.empty((samples, steps)).to(device)
 
-        s = env.new((samples,), device=device)
-        n, nnll = policy.new((samples,), device=device)
+        s = env.new((samples,)).to(device)
+        n, nnll = policy.new((samples,)).to(device)
         for t in range(steps):
             nnlls[:, t] = nnll
 
             a, anll, b = policy.act(n)
-            r, o, s1 = env.step(s, a)
+            r, o, s1 = env.step(s, a).to(device)
             n1, nnll, b1 = policy.step(n, o)
 
             rewards[:, t] = r

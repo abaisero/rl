@@ -6,6 +6,7 @@ import indextools
 from rl_parsers.pomdp import parse as parse_pomdp
 
 import rl.data as data
+from rl.utils import wtuple
 
 import numpy as np
 
@@ -51,11 +52,10 @@ class Environment:
     def nobs(self):
         return self.ospace.nelems
 
-    def new(self, shape=(), *, device=torch.device('cpu')):
-        return self.model.s0model.sample(shape).to(device)
+    def new(self, shape=()):
+        return self.model.s0model.sample(shape)
 
     def step(self, s, a):
-        device = s.device
         s = s.cpu()
         a = a.cpu()
 
@@ -73,8 +73,7 @@ class Environment:
         r = self.model.rewards[s, a, s1]
 
         # self.logger.debug(f'step():  {s} {a} -> {s1} {o} {r}')
-        # return r, o, s1
-        return r.to(device), o.to(device), s1.to(device)
+        return wtuple(r, o, s1)
 
     @staticmethod
     def from_fname(fname):

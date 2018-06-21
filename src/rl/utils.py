@@ -43,3 +43,18 @@ class DecayAction(argparse.Action):
     def __call__(self, parser, args, values, option_string=None):
         print(values)
         # setattr(args, self.dest, value)
+
+
+class wtuple:
+    def __init__(self, *args):
+        self.__objs = args
+
+    def __getitem__(self, key):
+        return self.__objs[key]
+
+    def __getattr__(self, attr):
+        def f(*args, **kwargs):
+            objs = [getattr(t, attr)(*args, **kwargs)
+                    for t in self.__objs]
+            return wtuple(*objs)
+        return f
