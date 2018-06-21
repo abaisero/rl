@@ -1,8 +1,0 @@
-distributions as arrays | id:0b04d6fadbb5a2a9e99b720a150219972ce96cb3
-implement mtcs | id:0b96dab6aa48de8bfbe91ef60bfd8dccc6e05035
-read-only values | id:0fee7c0a3d499919b8deed6fed86f8237d9ffa47
-handle .pomdp and .policy structures | id:284735f5d2aabaf170cff275558c6fad2bf39081
-implement pomcp | id:2bd98257b0ec4165752ea8d6f6532993d318532f
-implement semi-gradient td(0) for estimation | id:3854af98bedae800145a5accd3f5d3870082301b
-distributions as arrays;  not just iterators.. | id:9abe0824f60124bde0a7a7a721da44862e3d4e08
-implement gradient monte carlo for estimation | id:c76008fd753b6e9c9ca434a3b65b87c4f1c8f05a
